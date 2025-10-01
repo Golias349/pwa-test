@@ -13,58 +13,20 @@
 <body>
   <header class="hero"><h1>🌱 Grão Digital</h1></header>
   <main>
-    <section id="sec-talhoes" class="card">
-      <h2>🌿 Talhões</h2>
-      <input id="inpTalhao" placeholder="Nome do Talhão">
-      <button id="btnAddTalhao">Adicionar</button>
-      <ul id="listaTalhoes"></ul>
-    </section>
-    <section id="sec-registros" class="card hidden">
-      <h2>📝 Registros</h2>
-      <select id="selTalhao"></select>
-      <select id="selInsumo"></select>
-      <input id="inpQtd" type="number" placeholder="Qtd (kg)">
-      <input id="inpDesc" placeholder="Descrição">
-      <button id="btnSalvarAplic">Salvar</button>
-      <div id="listaAplics"></div>
-    </section>
-    <section id="sec-estoque" class="card hidden">
-      <h2>📦 Estoque</h2>
-      <input id="insNome" placeholder="Nome do insumo">
-      <input id="insQtd" type="number" placeholder="Quantidade (kg)">
-      <input id="insPreco" type="number" placeholder="Preço por saco (50kg)">
-      <button id="btnAddEstoque">Adicionar ao Estoque</button>
-      <div id="listaEstoque"></div>
-    </section>
-    <section id="sec-resumo" class="card hidden">
-      <h2>📊 Resumo Mensal</h2>
-      <div id="tabelaResumo"></div>
-      <h3>Kg aplicados</h3>
-      <canvas id="graficoKg"></canvas>
-      <button id="btnTipoKg">Alternar Gráfico</button>
-      <h3>Gasto (R$)</h3>
-      <canvas id="graficoGasto"></canvas>
-      <button id="btnTipoGasto">Alternar Gráfico</button>
-    </section>
-    <section id="sec-historico" class="card hidden">
+    <section id="sec-historico" class="card">
       <h2>📈 Histórico</h2>
       <h3>Kg aplicados por mês</h3>
       <canvas id="graficoLinhaKg"></canvas>
       <h3>Gasto (R$) por mês</h3>
       <canvas id="graficoLinhaGasto"></canvas>
-    </section>
-    <section id="sec-config" class="card hidden">
-      <h2>⚙️ Configurações</h2>
-      <button id="btnLimpar">Apagar todos os dados</button>
+      <div class="row gap">
+        <button id="btnCsvHistorico">Exportar CSV</button>
+        <button id="btnPdfHistorico">Exportar PDF</button>
+      </div>
     </section>
   </main>
   <nav class="bottom">
-    <button data-go="sec-talhoes" class="active">🌿</button>
-    <button data-go="sec-registros">📝</button>
-    <button data-go="sec-estoque">📦</button>
-    <button data-go="sec-resumo">📊</button>
-    <button data-go="sec-historico">📈</button>
-    <button data-go="sec-config">⚙️</button>
+    <button data-go="sec-historico" class="active">📈</button>
   </nav>
   <script src="app.js"></script>
 </body>
