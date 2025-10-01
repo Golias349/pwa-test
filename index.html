@@ -1,31 +1,143 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Grão Digital 🌱</title>
-  <link rel="stylesheet" href="estilo.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grão Digital</title>
   <link rel="manifest" href="manifest.json">
-  <script defer src="app.js"></script>
+  <link rel="icon" href="icone-192.png">
+  <meta name="theme-color" content="#0ea15f">
+  <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
-  <header>
-    <h1>🌱 Grão Digital</h1>
-    <p id="data"></p>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="logo">🌱</div>
+      <h1>Grão Digital</h1>
+      <p id="dataHoje"></p>
+    </div>
   </header>
 
-  <main id="conteudo"></main>
+  <main>
+    <!-- TALHÕES -->
+    <section id="sec-talhoes" class="card">
+      <h2>🌿 Talhões</h2>
+      <div class="row gap">
+        <input id="inpTalhao" placeholder="Nome do Talhão">
+        <button class="btn" id="btnAddTalhao">Adicionar Talhão</button>
+      </div>
+      <ul id="listaTalhoes" class="list"></ul>
+    </section>
 
-  <nav class="navbar">
-    <button onclick="mostrar('talhoes')">🌿 Talhões</button>
-    <button onclick="mostrar('registros')">📋 Registros</button>
-    <button onclick="mostrar('estoque')">📦 Estoque</button>
-    <button onclick="mostrar('resumo')">📊 Resumo</button>
-    <button onclick="mostrar('config')">⚙️ Configurações</button>
+    <!-- REGISTROS (aplicações) -->
+    <section id="sec-registros" class="card hidden">
+      <h2>📝 Registros de Adubação</h2>
+      <div class="grid g-4">
+        <label>
+          <span>Talhão</span>
+          <select id="selTalhao"></select>
+        </label>
+        <label>
+          <span>Insumo (do estoque)</span>
+          <select id="selInsumo"></select>
+          <small class="muted">O custo usa o preço do estoque (saco 50kg).</small>
+        </label>
+        <label>
+          <span>Qtd aplicada (kg)</span>
+          <input id="inpQtd" type="number" min="0" step="0.01" placeholder="Ex: 500">
+        </label>
+        <label class="full">
+          <span>Descrição (opcional)</span>
+          <input id="inpDesc" placeholder="Ex: Cobertura...">
+        </label>
+      </div>
+      <button class="btn wide" id="btnSalvarAplic">Salvar aplicação</button>
+
+      <h3 class="mt">Últimas aplicações</h3>
+      <div id="listaAplics" class="table-wrap"></div>
+    </section>
+
+    <!-- ESTOQUE -->
+    <section id="sec-estoque" class="card hidden">
+      <h2>📦 Estoque</h2>
+      <div class="grid g-3">
+        <label>
+          <span>Nome do insumo</span>
+          <input id="insNome" placeholder="Ex.: NPK">
+        </label>
+        <label>
+          <span>Quantidade (kg)</span>
+          <input id="insQtd" type="number" min="0" step="0.01" placeholder="Ex.: 1000">
+        </label>
+        <label>
+          <span>Preço por saco (50kg)</span>
+          <input id="insPreco" type="number" min="0" step="0.01" placeholder="Ex.: 120">
+        </label>
+      </div>
+      <button class="btn" id="btnAddEstoque">Adicionar ao Estoque</button>
+
+      <h3 class="mt">Itens no estoque</h3>
+      <div id="listaEstoque" class="table-wrap"></div>
+    </section>
+
+    <!-- RESUMO -->
+    <section id="sec-resumo" class="card hidden">
+      <h2>📊 Resumo Mensal</h2>
+      <div class="grid g-3">
+        <label>
+          <span>Mês</span>
+          <select id="selMes"></select>
+        </label>
+        <label>
+          <span>Ano</span>
+          <select id="selAno"></select>
+        </label>
+        <div class="row gap align-end">
+          <button class="btn" id="btnFiltrarResumo">Filtrar</button>
+          <button class="btn outline" id="btnCsv">Exportar CSV</button>
+          <button class="btn outline" id="btnPdf">Exportar PDF</button>
+        </div>
+      </div>
+      <div id="tabelaResumo" class="table-wrap"></div>
+    </section>
+
+    <!-- CONFIGS -->
+    <section id="sec-config" class="card hidden">
+      <h2>⚙️ Configurações</h2>
+      <div class="card flat">
+        <h3>Backup (JSON)</h3>
+        <div class="row gap">
+          <button class="btn" id="btnExportJson">Exportar backup (JSON)</button>
+          <input type="file" id="fileImport" accept="application/json">
+          <button class="btn" id="btnImportJson">Importar backup (JSON)</button>
+        </div>
+      </div>
+
+      <div class="card flat">
+        <h3>Backup no Google Drive (opcional)</h3>
+        <div class="row gap">
+          <button class="btn" id="btnLogin">Conectar ao Google</button>
+          <button class="btn" id="btnSalvarDrive">Salvar no Drive</button>
+          <button class="btn" id="btnCarregarDrive">Carregar do Drive</button>
+        </div>
+      </div>
+
+      <div class="card flat danger">
+        <h3>LIMPEZA</h3>
+        <button class="btn danger" id="btnLimpar">Apagar TODOS os dados</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom">
+    <button data-go="sec-talhoes" class="active">🌿 Talhões</button>
+    <button data-go="sec-registros">🧾 Registros</button>
+    <button data-go="sec-estoque">📦 Estoque</button>
+    <button data-go="sec-resumo">📊 Resumo</button>
+    <button data-go="sec-config">⚙️ Configurações</button>
   </nav>
 
-  <script>
-    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('service-worker.js'); }
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>

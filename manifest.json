@@ -1,10 +1,10 @@
 {
   "name": "Grão Digital",
-  "short_name": "GrãoDigital",
-  "start_url": ".",
+  "short_name": "Grão Digital",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0f1115",
-  "theme_color": "#27ae60",
+  "background_color": "#0b1215",
+  "theme_color": "#0ea15f",
   "icons": [
     {
       "src": "icone-192.png",
