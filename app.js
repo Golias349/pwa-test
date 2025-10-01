@@ -1,198 +1,316 @@
+// ======= Estado =======
 const CLIENT_ID = "149167584419-39h4d0qhjfjqs09687oih6p1fkpqds0k.apps.googleusercontent.com";
 const SCOPES = "https://www.googleapis.com/auth/drive.file openid email profile";
 let accessToken = null;
 
-// Exibir data
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("data").textContent = new Date().toLocaleDateString("pt-BR", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric"
-  });
+let talhoes   = JSON.parse(localStorage.getItem('talhoes')) || [];
+let estoque   = JSON.parse(localStorage.getItem('estoque')) || []; // {nome, qtd(kg), preco(saco50)}
+let registros = JSON.parse(localStorage.getItem('registros')) || []; // {dataISO, talhao, insumo, desc, qtd, precoUnitKg}
+
+const EL = s => document.querySelector(s);
+const todayStr = () => new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+// ======= Inicial =======
+document.addEventListener('DOMContentLoaded',()=>{
+  EL('#data').textContent = todayStr();
   mostrar('talhoes');
 });
 
-// Alternar páginas
-function mostrar(pagina) {
-  const conteudo = document.getElementById("conteudo");
-  if (pagina === 'estoque') {
-    conteudo.innerHTML = `
-      <section>
-        <h2>📦 Estoque</h2>
-        <input id="nomeInsumo" placeholder="Nome do Insumo"><br>
-        <input id="qtdInsumo" type="number" placeholder="Quantidade (kg)"><br>
-        <input id="precoInsumo" type="number" placeholder="Preço (R$)"><br>
-        <button onclick="adicionarEstoque()">Adicionar ao Estoque</button>
-        <div id="listaEstoque"></div>
-        <h3>📊 Resumo Mensal</h3>
-        <div id="resumo"></div>
+// ======= Navegação =======
+function mostrar(pagina){
+  const c = EL('#conteudo');
+  if(pagina==='talhoes') {
+    c.innerHTML = `
+      <section class="card">
+        <h2>🌿 Talhões</h2>
+        <div class="row">
+          <input id="inpTalhao" placeholder="Nome do talhão">
+          <button class="btn-full" onclick="addTalhao()">Adicionar talhão</button>
+        </div>
+        <ul id="listaTalhoes" class="list"></ul>
       </section>`;
-    atualizarEstoque();
-    atualizarResumo();
+    renderTalhoes();
   }
-  else if (pagina === 'registros') {
-    conteudo.innerHTML = `
-      <section>
+  if(pagina==='registros') {
+    c.innerHTML = `
+      <section class="card">
         <h2>📋 Registros de Adubação</h2>
-        <select id="talhao"></select>
-        <select id="insumo"></select>
-        <input id="descricao" placeholder="Descrição"><br>
-        <input id="qtdAplicada" type="number" placeholder="Quantidade (kg)"><br>
-        <button onclick="salvarRegistro()">Salvar Aplicação</button>
-        <div id="aplicacoes"></div>
+        <div class="row-3">
+          <div>
+            <label>Talhão</label>
+            <select id="selTalhao"></select>
+          </div>
+          <div>
+            <label>Insumo (do estoque)</label>
+            <select id="selInsumo"></select>
+            <div class="muted" id="hintInsumo"></div>
+          </div>
+          <div>
+            <label>Qtde aplicada (kg)</label>
+            <input id="inpKg" type="number" step="0.01" min="0">
+          </div>
+        </div>
+        <div class="row">
+          <input id="inpDesc" placeholder="Descrição (opcional)">
+          <button class="btn-full" onclick="salvarAplicacao()">Salvar aplicação</button>
+        </div>
+        <h3>Últimas aplicações</h3>
+        <ul id="listaAplic" class="list"></ul>
       </section>`;
     atualizarSelects();
-    atualizarAplicacoes();
+    renderAplicacoes();
   }
-  else if (pagina === 'talhoes') {
-    conteudo.innerHTML = `
-      <section>
-        <h2>🌿 Talhões</h2>
-        <input id="nomeTalhao" placeholder="Nome do Talhão">
-        <button onclick="adicionarTalhao()">Adicionar Talhão</button>
-        <div id="listaTalhoes"></div>
+  if(pagina==='estoque') {
+    c.innerHTML = `
+      <section class="card">
+        <h2>📦 Estoque</h2>
+        <div class="row-3">
+          <input id="inpNomeIns" placeholder="Nome do insumo">
+          <input id="inpQtdIns" type="number" step="0.01" min="0" placeholder="Quantidade (kg)">
+          <input id="inpPrecoIns" type="number" step="0.01" min="0" placeholder="Preço por saco (50kg)">
+        </div>
+        <div class="btn-row">
+          <button onclick="addEstoque()">Adicionar ao estoque</button>
+        </div>
+        <ul id="listaEstoque" class="list"></ul>
       </section>`;
-    atualizarTalhoes();
+    renderEstoque();
   }
-  else if (pagina === 'config') {
-    conteudo.innerHTML = `
-      <section>
+  if(pagina==='resumo') {
+    const now = new Date();
+    const m = String(now.getMonth()+1).padStart(2,'0');
+    const y = String(now.getFullYear());
+    c.innerHTML = `
+      <section class="card">
+        <h2>📊 Resumo Mensal</h2>
+        <div class="filter-row">
+          <select id="fMes"></select>
+          <select id="fAno"></select>
+          <button onclick="renderResumo()">Filtrar</button>
+          <div class="btn-row" style="margin-left:auto">
+            <button onclick="exportCSV()">Exportar CSV</button>
+            <button onclick="exportPrint()">Exportar PDF</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Insumo</th><th>Kg aplicados</th><th>Gasto (R$)</th><th>Mês/Ano</th></tr></thead>
+          <tbody id="tbodyResumo"></tbody>
+        </table>
+      </section>`;
+    // popular selects
+    const meses = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+    EL('#fMes').innerHTML = meses.map(mm=>`<option value="${mm}" ${'${'}mm===m?'selected':''}>${'${'}mm}</option>`).join('');
+    const anos = [];
+    const baseYear = new Date().getFullYear();
+    for(let yy=baseYear-5; yy<=baseYear+1; yy++) anos.push(String(yy));
+    EL('#fAno').innerHTML = anos.map(yy=>`<option value="${'${'}yy}" ${'${'}yy===y?'selected':''}>${'${'}yy}</option>`).join('');
+    renderResumo();
+  }
+  if(pagina==='config') {
+    c.innerHTML = `
+      <section class="card">
         <h2>⚙️ Configurações</h2>
-        <button onclick="exportarBackup()">Exportar Backup</button>
-        <button onclick="importarBackup()">Importar Backup</button>
-        <h3>☁️ Backup no Google Drive</h3>
-        <button onclick="initGoogle()">Conectar ao Google</button>
-        <button onclick="salvarNoDrive()">Salvar no Drive</button>
-        <button onclick="carregarDoDrive()">Carregar do Drive</button>
+        <div class="btn-row">
+          <button onclick="exportarBackup()">Exportar backup (JSON)</button>
+          <button onclick="importarBackup()">Importar backup (JSON)</button>
+        </div>
+        <h3>☁️ Google Drive (opcional)</h3>
+        <div class="btn-row">
+          <button onclick="initGoogle()">Conectar ao Google</button>
+          <button onclick="salvarNoDrive()">Salvar no Drive</button>
+          <button onclick="carregarDoDrive()">Carregar do Drive</button>
+        </div>
       </section>`;
   }
 }
 
-// ----- ESTOQUE -----
-function adicionarEstoque() {
-  let estoque = JSON.parse(localStorage.getItem("estoque")) || [];
-  let nome = document.getElementById("nomeInsumo").value;
-  let qtd = parseFloat(document.getElementById("qtdInsumo").value);
-  let preco = parseFloat(document.getElementById("precoInsumo").value);
-  if (!nome || !qtd || !preco) return;
-  estoque.push({ nome, qtd, preco });
-  localStorage.setItem("estoque", JSON.stringify(estoque));
-  atualizarEstoque();
-  atualizarResumo();
-}
-
-function atualizarEstoque() {
-  let estoque = JSON.parse(localStorage.getItem("estoque")) || [];
-  let lista = estoque.map(i => `<p>${i.nome} - ${i.qtd}kg - R$${i.preco}</p>`).join("");
-  document.getElementById("listaEstoque").innerHTML = lista;
-}
-
-function atualizarResumo() {
-  let registros = JSON.parse(localStorage.getItem("registros")) || [];
-  let resumo = {};
-  registros.forEach(r => {
-    if (!resumo[r.insumo]) resumo[r.insumo] = { qtd: 0, gasto: 0 };
-    resumo[r.insumo].qtd += r.qtd;
-    resumo[r.insumo].gasto += r.qtd * r.preco;
-  });
-  let html = Object.entries(resumo).map(([nome, dados]) =>
-    `<p>${nome}: ${dados.qtd}kg - R$${dados.gasto.toFixed(2)}</p>`
-  ).join("");
-  document.getElementById("resumo").innerHTML = html;
-}
-
-// ----- TALHÕES -----
-function adicionarTalhao() {
-  let talhoes = JSON.parse(localStorage.getItem("talhoes")) || [];
-  let nome = document.getElementById("nomeTalhao").value;
-  if (!nome) return;
+// ======= Talhões =======
+function addTalhao(){
+  const nome = EL('#inpTalhao').value.trim();
+  if(!nome) return;
+  if(talhoes.includes(nome)) return alert('Já existe esse talhão.');
   talhoes.push(nome);
-  localStorage.setItem("talhoes", JSON.stringify(talhoes));
-  atualizarTalhoes();
+  localStorage.setItem('talhoes', JSON.stringify(talhoes));
+  EL('#inpTalhao').value='';
+  renderTalhoes();
+}
+function renderTalhoes(){
+  const ul = EL('#listaTalhoes'); if(!ul) return;
+  ul.innerHTML = talhoes.map(t=>`<li class="item"><div><strong>${'${'}t}</strong></div></li>`).join('');
 }
 
-function atualizarTalhoes() {
-  let talhoes = JSON.parse(localStorage.getItem("talhoes")) || [];
-  document.getElementById("listaTalhoes").innerHTML = talhoes.map(t => `<p>${t}</p>`).join("");
+// ======= Estoque =======
+function addEstoque(){
+  const nome = EL('#inpNomeIns').value.trim();
+  const kg   = Number(EL('#inpQtdIns').value);
+  const preco= Number(EL('#inpPrecoIns').value);
+  if(!nome || kg<=0 || preco<0) return;
+  const ex = estoque.find(e=>e.nome.toLowerCase()===nome.toLowerCase());
+  if(ex){ ex.qtd += kg; ex.preco = preco; } else { estoque.push({nome, qtd:kg, preco}); }
+  localStorage.setItem('estoque', JSON.stringify(estoque));
+  EL('#inpNomeIns').value = EL('#inpQtdIns').value = EL('#inpPrecoIns').value = '';
+  renderEstoque(); atualizarSelects();
+}
+function renderEstoque(){
+  const ul = EL('#listaEstoque'); if(!ul) return;
+  ul.innerHTML = estoque.map(e=>`<li class="item">
+    <div><strong>${'${'}e.nome}</strong> <span class="badge">${'${'}e.qtd.toFixed(2)} kg</span> <span class="badge">R$${'${'}Number(e.preco).toFixed(2)}/50kg</span></div>
+  </li>`).join('');
 }
 
-// ----- REGISTROS -----
-function atualizarSelects() {
-  let talhoes = JSON.parse(localStorage.getItem("talhoes")) || [];
-  let insumos = JSON.parse(localStorage.getItem("estoque")) || [];
-  document.getElementById("talhao").innerHTML = talhoes.map(t => `<option>${t}</option>`).join("");
-  document.getElementById("insumo").innerHTML = insumos.map(i => `<option value="${i.nome}" data-preco="${i.preco}">${i.nome}</option>`).join("");
+// ======= Registros =======
+function atualizarSelects(){
+  const selT = EL('#selTalhao'); const selI = EL('#selInsumo');
+  if(selT) selT.innerHTML = talhoes.map(t=>`<option>${'${'}t}</option>`).join('');
+  if(selI) selI.innerHTML = estoque.map(e=>`<option value="${'${'}e.nome}" data-preco="${'${'}e.preco}">${'${'}e.nome} — ${'${'}e.qtd.toFixed(1)}kg</option>`).join('');
+  if(EL('#hintInsumo')) EL('#hintInsumo').textContent = estoque.length? 'O custo usa o preço do estoque (saco 50kg).': 'Cadastre insumos no Estoque.';
+}
+function salvarAplicacao(){
+  if(!talhoes.length) return alert('Cadastre um talhão primeiro.');
+  if(!estoque.length) return alert('Cadastre um insumo no estoque primeiro.');
+  const talhao = EL('#selTalhao').value;
+  const insumo = EL('#selInsumo').value;
+  const kg = Number(EL('#inpKg').value);
+  const desc = EL('#inpDesc').value.trim();
+  if(kg<=0) return;
+  const ref = estoque.find(e=>e.nome===insumo);
+  const precoUnit = (ref?.preco||0)/50; // R$/kg
+  if(ref){
+    if(ref.qtd < kg && !confirm(`Estoque insuficiente (${ '${' }ref.qtd.toFixed(2)} kg). Aplicar mesmo assim?`)) return;
+    ref.qtd -= kg;
+  }
+  registros.push({
+    dataISO: new Date().toISOString(),
+    talhao, insumo, desc, qtd:kg, precoUnitKg: precoUnit
+  });
+  localStorage.setItem('registros', JSON.stringify(registros));
+  localStorage.setItem('estoque', JSON.stringify(estoque));
+  EL('#inpKg').value=''; EL('#inpDesc').value='';
+  renderAplicacoes(); 
+}
+function renderAplicacoes(){
+  const ul = EL('#listaAplic'); if(!ul) return;
+  const ult = [...registros].reverse().slice(0,10);
+  ul.innerHTML = ult.map(a=>`<li class="item">
+    <div><strong>${'${'}a.talhao}</strong> • <span class="badge">${'${'}a.insumo}</span> • ${'${'}a.qtd.toFixed(2)} kg • R$${'${'}(a.qtd*a.precoUnitKg).toFixed(2)}
+    <br><small>${'${'}new Date(a.dataISO).toLocaleDateString('pt-BR')} — ${'${'}a.desc||'-'}</small></div>
+  </li>`).join('');
 }
 
-function salvarRegistro() {
-  let registros = JSON.parse(localStorage.getItem("registros")) || [];
-  let talhao = document.getElementById("talhao").value;
-  let insumo = document.getElementById("insumo").value;
-  let descricao = document.getElementById("descricao").value;
-  let qtd = parseFloat(document.getElementById("qtdAplicada").value);
-  let preco = parseFloat(document.querySelector(`#insumo option[value="${insumo}"]`).dataset.preco);
-  if (!talhao || !insumo || !qtd) return;
-  registros.push({ talhao, insumo, descricao, qtd, preco, data: new Date().toLocaleDateString("pt-BR") });
-  localStorage.setItem("registros", JSON.stringify(registros));
-  atualizarAplicacoes();
-  atualizarResumo();
+// ======= Resumo =======
+function getResumo(mes, ano){
+  const out = {}; // insumo -> {kg, gasto}
+  registros.forEach(r=>{
+    const dt = new Date(r.dataISO);
+    const mm = String(dt.getMonth()+1).padStart(2,'0');
+    const yy = String(dt.getFullYear());
+    if(mm===mes && yy===ano){
+      if(!out[r.insumo]) out[r.insumo] = {kg:0, gasto:0};
+      out[r.insumo].kg += r.qtd;
+      out[r.insumo].gasto += r.qtd * r.precoUnitKg;
+    }
+  });
+  return out;
+}
+function renderResumo(){
+  const mes = EL('#fMes').value; const ano = EL('#fAno').value;
+  const mapa = getResumo(mes, ano);
+  const tbody = EL('#tbodyResumo'); tbody.innerHTML='';
+  Object.entries(mapa).forEach(([ins,info])=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${'${'}ins}</td><td>${'${'}info.kg.toFixed(2)}</td><td>R$${'${'}info.gasto.toFixed(2)}</td><td>${'${'}mes}/${'${'}ano}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+function exportCSV(){
+  const mes = EL('#fMes').value; const ano = EL('#fAno').value;
+  const mapa = getResumo(mes, ano);
+  let csv = 'Insumo,Kg aplicados,Gasto (R$),Mes/Ano\n';
+  Object.entries(mapa).forEach(([ins,info])=>{
+    csv += `${'${'}ins},${'${'}info.kg.toFixed(2)},${'${'}info.gasto.toFixed(2)},${'${'}mes}/${'${'}ano}\n`;
+  });
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `resumo-${'${'}ano}-${'${'}mes}.csv`; a.click();
+}
+function exportPrint(){
+  const mes = EL('#fMes').value; const ano = EL('#fAno').value;
+  const mapa = getResumo(mes, ano);
+  let html = `<html><head><title>Resumo ${'${'}mes}/${'${'}ano}</title>
+  <style>body{{font-family:Arial}} table{{width:100%;border-collapse:collapse}} th,td{{border:1px solid #999;padding:8px;text-align:center}} th{{background:#2ecc71;color:#fff}}</style>
+  </head><body><h2>Resumo Mensal ${'${'}mes}/${'${'}ano}</h2><table><tr><th>Insumo</th><th>Kg aplicados</th><th>Gasto (R$)</th></tr>`;
+  Object.entries(mapa).forEach(([ins,info])=>{ html += `<tr><td>${'${'}ins}</td><td>${'${'}info.kg.toFixed(2)}</td><td>R$${'${'}info.gasto.toFixed(2)}</td></tr>`; });
+  html += `</table></body></html>`;
+  const w = window.open('','_blank'); w.document.write(html); w.document.close(); w.focus(); w.print();
 }
 
-function atualizarAplicacoes() {
-  let registros = JSON.parse(localStorage.getItem("registros")) || [];
-  let lista = registros.map(r => `<p>${r.data} - ${r.talhao} - ${r.insumo} - ${r.qtd}kg - R$${(r.qtd * r.preco).toFixed(2)}</p>`).join("");
-  document.getElementById("aplicacoes").innerHTML = lista;
+// ======= Backup local =======
+function exportarBackup(){
+  const obj = {talhoes, estoque, registros};
+  const blob = new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `grao-digital-backup-${'${'}Date.now()}.json`; a.click();
+}
+function importarBackup(){
+  const input = document.createElement('input'); input.type='file'; input.accept='.json';
+  input.onchange = e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const rd = new FileReader();
+    rd.onload = ()=>{
+      try{
+        const obj = JSON.parse(rd.result);
+        talhoes   = obj.talhoes   || talhoes;
+        estoque   = obj.estoque   || estoque;
+        registros = obj.registros || registros;
+        localStorage.setItem('talhoes', JSON.stringify(talhoes));
+        localStorage.setItem('estoque', JSON.stringify(estoque));
+        localStorage.setItem('registros', JSON.stringify(registros));
+        alert('Backup importado');
+      }catch(_e){ alert('Arquivo inválido'); }
+    };
+    rd.readAsText(f);
+  };
+  input.click();
 }
 
-// ----- BACKUP GOOGLE DRIVE -----
-function initGoogle() {
-  const s = document.createElement("script");
-  s.src = "https://accounts.google.com/gsi/client";
-  s.onload = () => {
+// ======= Google Drive =======
+function initGoogle(){
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = ()=>{
     google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: SCOPES,
-      callback: (token) => { accessToken = token.access_token; alert("Conectado ao Google!"); }
+      callback: (tok)=>{ accessToken = tok.access_token; alert('Conectado ao Google'); }
     }).requestAccessToken();
   };
   document.body.appendChild(s);
 }
-
-function salvarNoDrive() {
-  if (!accessToken) return alert("Conecte ao Google primeiro!");
-  let dados = localStorage.getItem("registros") || "{}";
-  fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=media", {
-    method: "POST",
-    headers: { "Authorization": "Bearer " + accessToken, "Content-Type": "application/json" },
-    body: dados
-  }).then(() => alert("Backup salvo no Drive!"));
+async function salvarNoDrive(){
+  if(!accessToken) return alert('Conecte ao Google primeiro');
+  const obj = {talhoes, estoque, registros};
+  const metadata = { name: `grao-digital-backup-${'${'}Date.now()}.json`, mimeType:'application/json' };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)],{type:'application/json'}));
+  form.append('file', new Blob([JSON.stringify(obj)],{type:'application/json'}));
+  const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{ method:'POST', headers:{Authorization:`Bearer ${'${'}accessToken}`}, body:form });
+  if(r.ok) alert('Backup salvo no Drive!'); else alert('Falha ao salvar.');
 }
-
-function carregarDoDrive() {
-  if (!accessToken) return alert("Conecte ao Google primeiro!");
-  alert("Carregar do Drive precisa buscar pelo fileId (implementação simplificada aqui).");
-}
-
-// ----- BACKUP LOCAL -----
-function exportarBackup() {
-  let dados = localStorage.getItem("registros") || "{}";
-  let blob = new Blob([dados], { type: "application/json" });
-  let url = URL.createObjectURL(blob);
-  let a = document.createElement("a");
-  a.href = url;
-  a.download = "backup.json";
-  a.click();
-}
-function importarBackup() {
-  let input = document.createElement("input");
-  input.type = "file";
-  input.accept = "application/json";
-  input.onchange = e => {
-    let reader = new FileReader();
-    reader.onload = () => {
-      localStorage.setItem("registros", reader.result);
-      atualizarAplicacoes();
-      atualizarResumo();
-    };
-    reader.readAsText(e.target.files[0]);
-  };
-  input.click();
+async function carregarDoDrive(){
+  if(!accessToken) return alert('Conecte ao Google primeiro');
+  const q = encodeURIComponent("name contains 'grao-digital-backup-' and mimeType = 'application/json'");
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${'${'}q}&orderBy=modifiedTime desc&pageSize=1&fields=files(id,name)`,{headers:{Authorization:`Bearer ${'${'}accessToken}`}});
+  const js = await r.json();
+  if(!js.files?.length) return alert('Nenhum backup encontrado');
+  const fileId = js.files[0].id;
+  const r2 = await fetch(`https://www.googleapis.com/drive/v3/files/${'${'}fileId}?alt=media`,{headers:{Authorization:`Bearer ${'${'}accessToken}`}});
+  const data = await r2.json();
+  talhoes   = data.talhoes   || talhoes;
+  estoque   = data.estoque   || estoque;
+  registros = data.registros || registros;
+  localStorage.setItem('talhoes', JSON.stringify(talhoes));
+  localStorage.setItem('estoque', JSON.stringify(estoque));
+  localStorage.setItem('registros', JSON.stringify(registros));
+  alert('Backup carregado do Drive');
 }
