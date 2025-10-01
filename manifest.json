@@ -1,1 +1,12 @@
-{"name": "Gr\u00e3o Digital", "short_name": "Gr\u00e3o", "start_url": "./", "display": "standalone", "background_color": "#0d1117", "theme_color": "#1b7a3b", "icons": [{"src": "icone.png", "sizes": "512x512", "type": "image/png"}]}
+{
+  "name": "Grão Digital",
+  "short_name": "GrãoDigital",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#2ecc71",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
