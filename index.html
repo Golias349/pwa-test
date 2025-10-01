@@ -1,176 +1,144 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Grão Digital</title>
-  <meta name="theme-color" content="#16a34a">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>🌱 Grão Digital</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icone-192.png">
-  <style>
-    :root{
-      --bg:#0b1215; --card:#0f1820; --muted:#9fb0b7; --text:#e6f4ef;
-      --accent:#22c55e; --accent-600:#16a34a; --danger:#ef4444;
-      --line:#1b2a34; --radius:14px;
-      --header-h: 160px; --footer-h: 74px; --gap-h: 16px;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--text);
-      font:500 16px/1.5 Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial;}
-    header{position:sticky;top:0;z-index:5;background:linear-gradient(180deg,#16a34a,#0ea25a 55%, #0b1215 100%);
-      padding:20px 16px 36px;text-align:center;border-bottom:1px solid #134d36}
-    header h1{margin:6px 0 4px;font-weight:800;letter-spacing:.3px}
-    header small{opacity:.9}
-    main{max-width:1100px;margin:-24px auto 100px;padding:0 14px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:16px 0}
-    .card h2{margin:0 0 12px}
-    .row{display:grid;gap:12px;grid-template-columns:repeat(12,1fr)}
-    .col-3{grid-column:span 3}.col-4{grid-column:span 4}.col-6{grid-column:span 6}.col-8{grid-column:span 8}.col-12{grid-column:span 12}
-    @media(max-width:900px){.row{grid-template-columns:repeat(6,1fr)} .row>[class*='col-']{grid-column:span 6}}
-    label{display:block;margin:6px 0;color:var(--muted);font-size:.92rem}
-    input,select,button{width:100%;border-radius:12px;border:1px solid #1c2a34;background:#0c151a;color:var(--text);padding:12px 14px;outline:none}
-    input:focus,select:focus{box-shadow:0 0 0 2px rgba(34,197,94,.35);border-color:#255c44}
-    .btn{background:var(--accent);border:none;color:#042312;font-weight:700;letter-spacing:.3px;cursor:pointer}
-    .btn-outline{background:transparent;border:1px solid #254235;color:#d6ffe7}
-    .btn-danger{background:var(--danger);color:#2b0a0a;border:none}
-    .muted{color:var(--muted);font-size:.9rem}
-    table{width:100%;border-collapse:collapse;border:1px solid #23323b;border-radius:12px;overflow:hidden}
-    th,td{padding:10px 12px;border-bottom:1px solid #23323b} th{background:#0f1a20;text-align:left}
-    .kpi{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 12px;background:#0e181d;border:1px solid #21333d;border-radius:12px}
-    .grid-2{display:grid;gap:16px;grid-template-columns:1fr 1fr} @media(max-width:900px){.grid-2{grid-template-columns:1fr}}
-    canvas{background:#0a1116;border:1px solid #192932;border-radius:12px}
-    /* ===== Scroll behavior ===== */
-    .main-scroll{max-height:calc(100vh - var(--header-h) - var(--footer-h) - var(--gap-h));overflow:auto;overscroll-behavior:contain}
-    .card-scroll{max-height:360px;overflow:auto;overscroll-behavior:contain;border-radius:12px}
-    .main-scroll,.card-scroll{scrollbar-width:thin;scrollbar-color:#2e8b57 #0f1417}
-    .main-scroll::-webkit-scrollbar,.card-scroll::-webkit-scrollbar{width:8px;height:8px}
-    .main-scroll::-webkit-scrollbar-thumb,.card-scroll::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#2e8b57,#197a43);border-radius:8px}
-    .main-scroll::-webkit-scrollbar-track,.card-scroll::-webkit-scrollbar-track{background:transparent}
-    nav{position:fixed;bottom:10px;left:0;right:0;display:flex;justify-content:center;z-index:10}
-    .tabs{display:grid;grid-template-columns:repeat(6,minmax(0,220px));gap:10px;width:min(1100px,95vw)}
-    .tab{background:#0d171b;border:1px solid #1c2a34;color:#bfead4;padding:12px 14px;text-align:center;border-radius:14px;cursor:pointer;font-weight:700}
-    .tab.active{background:#16a34a;color:#042312;border-color:#1b6d45}
-  </style>
+  <link rel="icon" href="icone.png">
+  <link rel="apple-touch-icon" href="icone-192.png">
+  <meta name="theme-color" content="#1e7f3f">
+  <link rel="stylesheet" href="estilo.css">
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- jsPDF + autotable -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://apis.google.com/js/api.js"></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Grão Digital</h1>
-    <small id="dataHoje"></small>
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">🌱</span>
+      <div>
+        <h1>Grão Digital</h1>
+        <small id="subtitle">Gestão de talhões, aplicações e custos</small>
+      </div>
+    </div>
   </header>
 
-  <main>
-    <section id="sec-talhoes" class="card main-scroll">
-      <h2>🌾 Talhões</h2>
+  <main id="content">
+    <!-- Talhões -->
+    <section id="sec-talhoes" class="card active">
+      <h2>🌿 Talhões</h2>
       <div class="row">
-        <div class="col-8"><label>Nome do Talhão</label><input id="nomeTalhao" placeholder="Ex.: Clonal 01"></div>
-        <div class="col-4" style="margin-top:28px"><button class="btn" onclick="adicionarTalhao()">Adicionar</button></div>
+        <input id="inpTalhao" placeholder="Nome do Talhão"/>
+        <button class="btn" id="btnAddTalhao">Adicionar Talhão</button>
       </div>
-      <div class="card-scroll"><div id="listaTalhoes" class="row" style="grid-template-columns:repeat(3,1fr)"></div></div>
+      <ul id="listaTalhoes" class="list"></ul>
     </section>
 
-    <section id="sec-registros" class="card main-scroll" style="display:none">
-      <h2>📝 Registros de Adubação</h2>
-      <div class="row">
-        <div class="col-3"><label>Talhão</label><select id="selTalhao"></select></div>
-        <div class="col-4"><label>Insumo (do estoque)</label><select id="selInsumo"></select><div class="muted">Custo com base no saco 50kg do estoque.</div></div>
-        <div class="col-3"><label>Qtd aplicada (kg)</label><input id="qtdAplicada" type="number" step="0.1"></div>
-        <div class="col-12"><label>Descrição (opcional)</label><input id="descAplicacao"></div>
-        <div class="col-12" style="display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="salvarAplicacao()">Salvar aplicação</button></div>
+    <!-- Registros -->
+    <section id="sec-registros" class="card">
+      <h2>🧾 Registros de Adubação</h2>
+      <div class="grid-4">
+        <select id="selTalhao"></select>
+        <select id="selInsumo"></select>
+        <input id="inpDesc" placeholder="Descrição (opcional)"/>
+        <input id="inpQtd" type="number" step="0.01" placeholder="Qtde aplicada (kg)"/>
       </div>
-      <h3 style="margin-top:12px">Últimas aplicações</h3>
-      <div class="card-scroll"><div id="listaAplicacoes"></div></div>
+      <div class="hint" id="insumoHint">O custo usa o preço do estoque (saco 50kg).</div>
+      <button class="btn primary" id="btnSalvarAplicacao">Salvar aplicação</button>
+      <h3>Últimas aplicações</h3>
+      <ul id="listaAplicacoes" class="list"></ul>
     </section>
 
-    <section id="sec-estoque" class="card main-scroll" style="display:none">
+    <!-- Estoque -->
+    <section id="sec-estoque" class="card">
       <h2>📦 Estoque</h2>
-      <div class="row">
-        <div class="col-4"><label>Nome do insumo</label><input id="nomeInsumo"></div>
-        <div class="col-4"><label>Quantidade (kg)</label><input id="qtdInsumo" type="number" step="0.1"></div>
-        <div class="col-4"><label>Preço por saco (50kg)</label><input id="precoSaco" type="number" step="0.01"></div>
-        <div class="col-12" style="display:flex;justify-content:flex-end"><button class="btn" onclick="addEstoque()">Adicionar ao Estoque</button></div>
+      <div class="grid-3">
+        <input id="inpNomeInsumo" placeholder="Ex.: NPK"/>
+        <input id="inpQtdInsumo" type="number" step="0.01" placeholder="Ex.: 1000 (kg)"/>
+        <input id="inpPrecoInsumo" type="number" step="0.01" placeholder="Preço por saco 50kg (R$)"/>
       </div>
-      <h3 style="margin-top:12px">Itens</h3>
-      <div class="card-scroll">
-        <table><thead><tr><th>Insumo</th><th>Qtd (kg)</th><th>Preço 50kg (R$)</th><th></th></tr></thead><tbody id="tbodyEstoque"></tbody></table>
-      </div>
+      <button class="btn primary" id="btnAddEstoque">Adicionar ao Estoque</button>
 
-      <h3 style="margin-top:12px">Resumo Mensal (tabela)</h3>
-      <div class="row">
-        <div class="col-3"><label>Mês</label><select id="mm"></select></div>
-        <div class="col-3"><label>Ano</label><select id="yy"></select></div>
-        <div class="col-6" style="margin-top:28px;display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn-outline" onclick="exportarCSV()">Exportar CSV</button>
-          <button class="btn-outline" onclick="exportarPDF()">Exportar PDF</button>
+      <h3>Itens</h3>
+      <table class="tabela">
+        <thead><tr><th>Insumo</th><th>Qtd (kg)</th><th>Preço 50kg (R$)</th><th>Ações</th></tr></thead>
+        <tbody id="tbEstoque"></tbody>
+      </table>
+    </section>
+
+    <!-- Resumo (tabela + gráficos responsivos) -->
+    <section id="sec-resumo" class="card">
+      <h2>📊 Resumo Mensal</h2>
+      <div class="grid-3">
+        <select id="selMes"></select>
+        <select id="selAno"></select>
+        <div class="right">
+          <button class="btn" id="btnCSV">Exportar CSV</button>
+          <button class="btn" id="btnPDF">Exportar PDF</button>
         </div>
       </div>
-      <div class="card-scroll">
-        <table><thead><tr><th>Insumo</th><th>Kg aplicados</th><th>Gasto (R$)</th><th>Mês/Ano</th></tr></thead>
-          <tbody id="tbodyResumo"></tbody>
-          <tfoot><tr><td>Total</td><td id="totKg">0</td><td id="totR$">0,00</td><td id="totMes"></td></tr></tfoot>
-        </table>
+
+      <table class="tabela" id="tblResumo">
+        <thead><tr><th>Insumo</th><th>Kg aplicados</th><th>Gasto (R$)</th><th>Mês/Ano</th></tr></thead>
+        <tbody id="tbodyResumo"></tbody>
+        <tfoot><tr><th>Total</th><th id="totKg">0</th><th id="totR$">0,00</th><th></th></tr></tfoot>
+      </table>
+
+      <div class="charts">
+        <div class="chart-card">
+          <h3>Kg aplicados por insumo</h3>
+          <canvas id="chartKg"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Gasto por insumo (R$)</h3>
+          <canvas id="chartGasto"></canvas>
+        </div>
       </div>
     </section>
 
-    <section id="sec-resumo" class="card main-scroll" style="display:none">
-      <h2>📊 Resumo — gráficos</h2>
+    <!-- Histórico (backup local JSON + Google Drive) -->
+    <section id="sec-historico" class="card">
+      <h2>🗂️ Histórico / Backup</h2>
       <div class="grid-2">
-        <div><h3 style="margin:8px 0">Kg aplicados por insumo</h3><canvas id="chartKg" height="240"></canvas></div>
-        <div><h3 style="margin:8px 0">Gasto por insumo (R$)</h3><canvas id="chartR$" height="240"></canvas></div>
+        <button class="btn" id="btnExportJSON">Exportar backup (JSON)</button>
+        <label class="file">
+          <input type="file" id="fileImportJSON" accept="application/json"/>
+          <span class="btn">Importar backup (JSON)</span>
+        </label>
+      </div>
+
+      <h3>Backup no Google Drive (opcional)</h3>
+      <div class="grid-3">
+        <button class="btn" id="btnGConnect">Conectar ao Google</button>
+        <button class="btn" id="btnGSalvar">Salvar no Drive</button>
+        <button class="btn" id="btnGCarregar">Carregar do Drive</button>
       </div>
     </section>
 
-    <section id="sec-historico" class="card main-scroll" style="display:none">
-      <h2>🗂️ Histórico</h2>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:8px">
-        <button class="btn-outline" onclick="exportarCSV(true)">Exportar CSV</button>
-        <button class="btn-outline" onclick="exportarPDF(true)">Exportar PDF</button>
-      </div>
-      <div class="card-scroll">
-        <table><thead><tr><th>Data</th><th>Talhão</th><th>Insumo</th><th>Kg</th><th>Custo (R$)</th><th>Descrição</th></tr></thead><tbody id="tbodyHistorico"></tbody></table>
-      </div>
-    </section>
-
-    <section id="sec-config" class="card main-scroll" style="display:none">
+    <!-- Config -->
+    <section id="sec-config" class="card">
       <h2>⚙️ Configurações</h2>
-      <div class="card">
-        <h3>Backup (JSON)</h3>
-        <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
-          <button class="btn-outline" onclick="exportarBackup()">Exportar backup (JSON)</button>
-          <input type="file" id="inputRestore" style="display:none" accept="application/json" />
-          <button class="btn-outline" onclick="document.getElementById('inputRestore').click()">Importar backup (JSON)</button>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Backup no Google Drive (opcional)</h3>
-        <p class="muted">Conecte e use sua conta Google para salvar/carregar o backup (escopo drive.file).</p>
-        <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
-          <button class="btn-outline" onclick="conectarGoogle()">Conectar ao Google</button>
-          <button class="btn-outline" onclick="salvarNoDrive()">Salvar no Drive</button>
-          <button class="btn-outline" onclick="carregarDoDrive()">Carregar do Drive</button>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Limpeza</h3>
-        <button class="btn-danger" onclick="apagarTudo()">Apagar TODOS os dados</button>
-      </div>
+      <button class="btn danger" id="btnWipe">Apagar TODOS os dados</button>
     </section>
   </main>
 
-  <nav>
-    <div class="tabs">
-      <div class="tab active" onclick="show('talhoes')">🌾 Talhões</div>
-      <div class="tab" onclick="show('registros')">📝 Registros</div>
-      <div class="tab" onclick="show('estoque')">📦 Estoque</div>
-      <div class="tab" onclick="show('resumo')">📊 Resumo</div>
-      <div class="tab" onclick="show('historico')">🗂️ Histórico</div>
-      <div class="tab" onclick="show('config')">⚙️ Config</div>
-    </div>
+  <nav class="nav">
+    <button data-go="sec-talhoes" class="active">🌿 Talhões</button>
+    <button data-go="sec-registros">🧾 Registros</button>
+    <button data-go="sec-estoque">📦 Estoque</button>
+    <button data-go="sec-resumo">📊 Resumo</button>
+    <button data-go="sec-historico">🗂️ Histórico</button>
+    <button data-go="sec-config">⚙️ Config</button>
   </nav>
 
   <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+    }
+  </script>
 </body>
 </html>

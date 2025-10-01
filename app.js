@@ -1,63 +1,296 @@
-/* app with scroll fix */
+// ====== Storage helpers ======
+const LS = {
+  get: (k, d) => JSON.parse(localStorage.getItem(k) || JSON.stringify(d)),
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+  wipe: () => localStorage.clear()
+};
+
+// ====== Data keys ======
+const K = {
+  TALHOES: "talhoes",
+  ESTOQUE: "estoque",
+  APLICACOES: "aplicacoes"
+};
+
+// ====== Google Drive OAuth (token) ======
 const CLIENT_ID = "149167584419-39h4d0qhjfjqs09687oih6p1fkpqds0k.apps.googleusercontent.com";
-const SCOPES = "https://www.googleapis.com/auth/drive.file openid email profile";
-let tokenClient=null, accessToken=null;
-const db={ get(k,d){try{return JSON.parse(localStorage.getItem(k)??JSON.stringify(d));}catch(e){return d;}}, set(k,v){localStorage.setItem(k,JSON.stringify(v));}};
-const $=s=>document.querySelector(s);
+const SCOPES = "https://www.googleapis.com/auth/drive.file email profile";
+let accessToken = null;
 
-function fmtR(v){return (v??0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function fmtKg(v){return (v??0).toLocaleString('pt-BR',{maximumFractionDigits:1});}
-(function(){const el=$('#dataHoje'); if(el) el.textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});})();
+function initGoogle(){
+  if(!CLIENT_ID.includes(".apps.googleusercontent.com")){
+    alert("Edite CLIENT_ID em app.js antes de conectar.");
+    return;
+  }
+  const s = document.createElement("script");
+  s.src = "https://accounts.google.com/gsi/client";
+  s.onload = () => {
+    google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID, scope: SCOPES,
+      callback: token => { accessToken = token.access_token; alert("Conectado ao Google."); }
+    }).requestAccessToken();
+  };
+  document.body.appendChild(s);
+}
 
-function show(id){const secs=["talhoes","registros","estoque","resumo","historico","config"];secs.forEach(s=>document.getElementById(`sec-${s}`).style.display=s===id?'block':'none');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab')[secs.indexOf(id)].classList.add('active');render();}
-function render(){renderTalhoes();renderEstoque();renderRegistros();renderResumoTabela();renderHistorico();renderGraficos();}
+async function salvarNoDrive(){
+  if(!accessToken) return alert("Conecte ao Google primeiro.");
+  const payload = {
+    talhoes: LS.get(K.TALHOES, []),
+    estoque: LS.get(K.ESTOQUE, []),
+    aplicacoes: LS.get(K.APLICACOES, []),
+    savedAt: new Date().toISOString()
+  };
+  const form = new FormData();
+  form.append("metadata", new Blob([JSON.stringify({name:"grao-digital-backup.json", mimeType:"application/json"})], {type:"application/json"}));
+  form.append("file", new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"}));
+  const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+    method:"POST",
+    headers: { Authorization: "Bearer " + accessToken },
+    body: form
+  });
+  if(!res.ok) return alert("Falha ao salvar no Drive.");
+  alert("Backup salvo no Drive!");
+}
 
-// Talhões
-function adicionarTalhao(){const nome=$('#nomeTalhao').value.trim();if(!nome)return;const t=db.get('talhoes',[]);t.push({id:crypto.randomUUID(),nome});db.set('talhoes',t);$('#nomeTalhao').value='';renderTalhoes();}
-function removerTalhao(id){let t=db.get('talhoes',[]);t=t.filter(x=>x.id!==id);db.set('talhoes',t);render();}
-function renderTalhoes(){const t=db.get('talhoes',[]);const wrap=$('#listaTalhoes');wrap.innerHTML=t.map(x=>`<div class="kpi"><div>🌿 <b>${x.nome}</b></div><button class="btn-outline" onclick="removerTalhao('${x.id}')">Excluir</button></div>`).join('');const sel=$('#selTalhao');sel.innerHTML=`<option value="">Selecione...</option>`+t.map(x=>`<option>${x.nome}</option>`).join('');}
+async function carregarDoDrive(){
+  if(!accessToken) return alert("Conecte ao Google primeiro.");
+  // Busca arquivo pelo nome
+  const q = encodeURIComponent("name='grao-digital-backup.json' and trashed=false");
+  const ls = await fetch("https://www.googleapis.com/drive/v3/files?q="+q+"&fields=files(id,name)", {
+    headers:{Authorization:"Bearer "+accessToken}
+  }).then(r=>r.json());
+  if(!ls.files?.length) return alert("Nenhum backup encontrado.");
+  const id = ls.files[0].id;
+  const data = await fetch("https://www.googleapis.com/drive/v3/files/"+id+"?alt=media", {
+    headers:{Authorization:"Bearer "+accessToken}
+  }).then(r=>r.json());
+  LS.set(K.TALHOES, data.talhoes||[]);
+  LS.set(K.ESTOQUE, data.estoque||[]);
+  LS.set(K.APLICACOES, data.aplicacoes||[]);
+  renderAll(); alert("Backup carregado do Drive!");
+}
 
-// Estoque
-function addEstoque(){const nome=$('#nomeInsumo').value.trim(),qtd=parseFloat($('#qtdInsumo').value||0),preco=parseFloat($('#precoSaco').value||0);if(!nome||!qtd||!preco)return;const e=db.get('estoque',[]);const i=e.findIndex(x=>x.nome.toLowerCase()===nome.toLowerCase());if(i>=0){e[i].qtd+=qtd;e[i].preco=preco;}else e.push({id:crypto.randomUUID(),nome,qtd,preco});db.set('estoque',e);$('#nomeInsumo').value=$('#qtdInsumo').value=$('#precoSaco').value='';renderEstoque();}
-function removerEstoque(id){let e=db.get('estoque',[]);e=e.filter(x=>x.id!==id);db.set('estoque',e);render();}
-function renderEstoque(){const e=db.get('estoque',[]);const tb=$('#tbodyEstoque');tb.innerHTML=e.map(x=>`<tr><td>${x.nome}</td><td>${fmtKg(x.qtd)}</td><td>R$ ${fmtR(x.preco)}</td><td style="text-align:right"><button class="btn-outline" onclick="removerEstoque('${x.id}')">Excluir</button></td></tr>`).join('');const sel=$('#selInsumo');sel.innerHTML=`<option value="">Selecione...</option>`+e.map(x=>`<option value="${x.id}">${x.nome} — ${fmtKg(x.qtd)}kg</option>`).join('');}
+// ====== UI helpers ======
+function $(id){ return document.getElementById(id); }
+function opt(v,t){ const o=document.createElement("option"); o.value=v; o.textContent=t; return o; }
+function money(v){ return (v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
 
-// Registros
-function salvarAplicacao(){const talhao=$('#selTalhao').value,idInsumo=$('#selInsumo').value,kg=parseFloat($('#qtdAplicada').value||0),desc=$('#descAplicacao').value.trim();if(!talhao||!idInsumo||!kg)return alert("Preencha talhão, insumo e quantidade.");const e=db.get('estoque',[]);const ins=e.find(x=>x.id===idInsumo);if(!ins)return;if(ins.qtd<kg)return alert("Estoque insuficiente.");ins.qtd-=kg;db.set('estoque',e);const custo=(kg/50)*(ins.preco||0);const reg=db.get('aplicacoes',[]);reg.unshift({id:crypto.randomUUID(),data:Date.now(),talhao,insumo:ins.nome,kg,custo,desc});db.set('aplicacoes',reg);$('#qtdAplicada').value='';$('#descAplicacao').value='';render();}
-function removerAplicacao(id){let r=db.get('aplicacoes',[]);const item=r.find(x=>x.id===id);if(item){const e=db.get('estoque',[]);const ins=e.find(x=>x.nome===item.insumo);if(ins){ins.qtd+=item.kg;db.set('estoque',e);}}r=r.filter(x=>x.id!==id);db.set('aplicacoes',r);render();}
-function renderRegistros(){const r=db.get('aplicacoes',[]),wrap=$('#listaAplicacoes');wrap.innerHTML=r.slice(0,20).map(x=>`<div class="kpi"><div><div><b>${x.talhao}</b> – ${x.insumo} • ${fmtKg(x.kg)} kg</div><small class="muted">${new Date(x.data).toLocaleDateString('pt-BR')} — R$ ${fmtR(x.custo)} ${x.desc?('• '+x.desc):''}</small></div><button class="btn-outline" onclick="removerAplicacao('${x.id}')">Excluir</button></div>`).join('');}
+// ====== Render & Actions ======
+function renderTalhoes(){
+  const talhoes = LS.get(K.TALHOES, []);
+  const ul = $("listaTalhoes"); ul.innerHTML="";
+  talhoes.forEach((t,i)=>{
+    const li = document.createElement("li");
+    li.innerHTML = `<span>${t}</span>
+      <span>
+        <button class="btn" onclick="remTalhao(${i})">Excluir</button>
+      </span>`;
+    ul.appendChild(li);
+  });
+  const sel = $("selTalhao"); sel.innerHTML=""; sel.appendChild(opt("","Talhão..."));
+  talhoes.forEach(t=> sel.appendChild(opt(t,t)));
+}
+function remTalhao(i){
+  const arr = LS.get(K.TALHOES, []);
+  arr.splice(i,1); LS.set(K.TALHOES, arr); renderTalhoes();
+}
 
-// Resumo
-function preencherMesAno(){const mm=$('#mm'),yy=$('#yy');if(!mm||!yy)return;const now=new Date(),meses=["01","02","03","04","05","06","07","08","09","10","11","12"];mm.innerHTML=meses.map((m,i)=>`<option value="${i+1}" ${i===now.getMonth()?'selected':''}>${m}</option>`).join('');let ys="";for(let y=now.getFullYear()-6;y<=now.getFullYear()+1;y++)ys+=`<option ${y===now.getFullYear()?'selected':''}>${y}</option>`;yy.innerHTML=ys;}
-function resumoPorInsumo(m,y){const r=db.get('aplicacoes',[]);const list=r.filter(x=>{const d=new Date(x.data);return (d.getMonth()+1)===m&&d.getFullYear()===y;});const map=new Map();list.forEach(x=>{const cur=map.get(x.insumo)||{kg:0,rs:0};cur.kg+=x.kg;cur.rs+=x.custo;map.set(x.insumo,cur);});return Array.from(map.entries()).map(([insumo,v])=>({insumo,kg:v.kg,rs:v.rs}));}
-function renderResumoTabela(){preencherMesAno();const mm=$('#mm');if(!mm)return;const yy=$('#yy');const m=parseInt(mm.value),y=parseInt(yy.value);const arr=resumoPorInsumo(m,y);const tb=$('#tbodyResumo');tb.innerHTML=arr.map(x=>`<tr><td>${x.insumo}</td><td>${fmtKg(x.kg)}</td><td>R$ ${fmtR(x.rs)}</td><td>${String(m).padStart(2,'0')}/${y}</td></tr>`).join('');$('#totKg').textContent=fmtKg(arr.reduce((a,b)=>a+b.kg,0));$('#totR$').textContent=fmtR(arr.reduce((a,b)=>a+b.rs,0));$('#totMes').textContent=`${String(m).padStart(2,'0')}/${y}`;renderGraficos();}
-let chartKg=null,chartRs=null;
-function renderGraficos(){const mm=$('#mm');if(!mm)return;const yy=$('#yy');const m=parseInt(mm.value),y=parseInt(yy.value);const arr=resumoPorInsumo(m,y);const labels=arr.map(x=>x.insumo),dataKg=arr.map(x=>x.kg),dataRs=arr.map(x=>x.rs);const ctx1=$('#chartKg'),ctx2=$('#chartR$');if(!ctx1||!ctx2)return;const cfg=(label,data)=>({type:'bar',data:{labels,datasets:[{label,data,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{legend:{display:false}}}});if(chartKg)chartKg.destroy();if(chartRs)chartRs.destroy();chartKg=new Chart(ctx1,cfg("Kg aplicados",dataKg));chartRs=new Chart(ctx2,cfg("Gasto (R$)",dataRs));}
+function renderEstoque(){
+  const itens = LS.get(K.ESTOQUE, []);
+  const tb = $("tbEstoque"); tb.innerHTML="";
+  itens.forEach((e,i)=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${e.nome}</td><td>${e.qtd}</td><td>${money(e.preco)}</td>
+      <td><button class="btn" onclick="delEstoque(${i})">Excluir</button></td>`;
+    tb.appendChild(tr);
+  });
+  // popular selInsumo
+  const sel = $("selInsumo"); sel.innerHTML=""; sel.appendChild(opt("","Insumo (do estoque)"));
+  itens.forEach(e=> sel.appendChild(opt(e.nome, e.nome)));
+}
+function delEstoque(i){
+  const arr = LS.get(K.ESTOQUE, []); arr.splice(i,1); LS.set(K.ESTOQUE, arr); renderEstoque();
+}
 
-// Histórico
-function renderHistorico(){const r=db.get('aplicacoes',[]);const tb=$('#tbodyHistorico');if(!tb)return;tb.innerHTML=r.map(x=>`<tr><td>${new Date(x.data).toLocaleDateString('pt-BR')}</td><td>${x.talhao}</td><td>${x.insumo}</td><td>${fmtKg(x.kg)}</td><td>R$ ${fmtR(x.custo)}</td><td>${x.desc??''}</td></tr>`).join('');}
+function renderAplicacoes(){
+  const aps = LS.get(K.APLICACOES, []).slice(-10).reverse();
+  const ul = $("listaAplicacoes"); ul.innerHTML="";
+  aps.forEach(a=>{
+    const li = document.createElement("li");
+    li.textContent = `${a.data} • ${a.talhao} • ${a.insumo} • ${a.qtd}kg • ${money(a.custo)}`;
+    ul.appendChild(li);
+  });
+}
 
-// Export
-function exportarCSV(todos=false){const mm=parseInt($('#mm').value),yy=parseInt($('#yy').value);const r=db.get('aplicacoes',[]);const list=todos?r:r.filter(x=>{const d=new Date(x.data);return (d.getMonth()+1)===mm&&d.getFullYear()===yy;});const rows=[["Data","Talhão","Insumo","Kg","Custo(R$)","Descrição"]].concat(list.map(x=>[new Date(x.data).toLocaleDateString('pt-BR'),x.talhao,x.insumo,x.kg,x.custo,x.desc??""]));const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=todos?"historico.csv":`resumo_${String(mm).padStart(2,'0')}_${yy}.csv`;a.click();}
-async function exportarPDF(todos=false){const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:"landscape"});const mm=parseInt($('#mm').value),yy=parseInt($('#yy').value);doc.setFontSize(16);doc.text("Grão Digital - Relatório",14,16);doc.setFontSize(11);doc.text(todos?"Histórico completo":"Resumo mensal",14,24);const r=db.get('aplicacoes',[]);const list=todos?r:r.filter(x=>{const d=new Date(x.data);return (d.getMonth()+1)===mm&&d.getFullYear()===yy;});let y=36;doc.setFont("helvetica","bold");doc.text("Data",14,y);doc.text("Talhão",48,y);doc.text("Insumo",100,y);doc.text("Kg",150,y);doc.text("Custo(R$)",170,y);doc.text("Descrição",210,y);y+=6;doc.setFont("helvetica","normal");list.forEach(x=>{if(y>195){doc.addPage();y=20;}doc.text(new Date(x.data).toLocaleDateString('pt-BR'),14,y);doc.text(String(x.talhao),48,y);doc.text(String(x.insumo),100,y);doc.text(fmtKg(x.kg),150,y);doc.text(fmtR(x.custo),170,y);doc.text(String(x.desc??""),210,y);y+=6;});doc.save(todos?"historico.pdf":`resumo_${String(mm).padStart(2,'0')}_${yy}.pdf`);}
+function renderResumo(){
+  // fill combos
+  const mSel = $("selMes"), ySel = $("selAno");
+  if(!mSel.options.length){
+    for(let m=1;m<=12;m++) mSel.appendChild(opt(String(m).padStart(2,"0"), String(m).padStart(2,"0")));
+  }
+  if(!ySel.options.length){
+    const y = new Date().getFullYear();
+    for(let k=y-5;k<=y+3;k++) ySel.appendChild(opt(k,k));
+    ySel.value = y;
+    mSel.value = String(new Date().getMonth()+1).padStart(2,"0");
+  }
+  const mes = mSel.value, ano = ySel.value;
+  const aps = LS.get(K.APLICACOES, []).filter(a=> a.mes===mes && a.ano===ano);
+  // aggregate by insumo
+  const map = {};
+  aps.forEach(a=>{
+    if(!map[a.insumo]) map[a.insumo] = {kg:0, gasto:0};
+    map[a.insumo].kg += Number(a.qtd)||0;
+    map[a.insumo].gasto += Number(a.custo)||0;
+  });
+  const tb = $("tbodyResumo"); tb.innerHTML="";
+  let tkg=0, tg=0;
+  Object.entries(map).forEach(([ins, obj])=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${ins}</td><td>${obj.kg}</td><td>${money(obj.gasto)}</td><td>${mes}/${ano}</td>`;
+    tb.appendChild(tr); tkg+=obj.kg; tg+=obj.gasto;
+  });
+  $("totKg").textContent = tkg;
+  $("totR$").textContent = money(tg);
+  // charts
+  const labels = Object.keys(map), dataKg = labels.map(l=>map[l].kg), dataR$ = labels.map(l=>map[l].gasto);
+  drawCharts(labels, dataKg, dataR$);
+}
 
-// Backup JSON
-function exportarBackup(){const data={talhoes:db.get('talhoes',[]),estoque:db.get('estoque',[]),aplicacoes:db.get('aplicacoes',[])};const blob=new Blob([JSON.stringify(data)],{type:"application/json"});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download="grao-digital-backup.json";a.click();}
-document.getElementById('inputRestore')?.addEventListener('change',(ev)=>{const f=ev.target.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{try{const o=JSON.parse(fr.result);if(o.talhoes)db.set('talhoes',o.talhoes);if(o.estoque)db.set('estoque',o.estoque);if(o.aplicacoes)db.set('aplicacoes',o.aplicacoes);render();alert("Backup importado!");}catch(e){alert("Arquivo inválido.");}};fr.readAsText(f);});
+let chartKg, chartGasto;
+function drawCharts(labels, kg, gasto){
+  const ctx1 = document.getElementById("chartKg");
+  const ctx2 = document.getElementById("chartGasto");
+  if(chartKg) chartKg.destroy(); if(chartGasto) chartGasto.destroy();
+  chartKg = new Chart(ctx1, {
+    type:"bar",
+    data:{labels, datasets:[{label:"Kg", data:kg}]},
+    options:{responsive:true, maintainAspectRatio:false}
+  });
+  chartGasto = new Chart(ctx2, {
+    type:"bar",
+    data:{labels, datasets:[{label:"R$", data:gasto}]},
+    options:{responsive:true, maintainAspectRatio:false}
+  });
+}
 
-// Google Drive
-function ensureGapiLoaded(){return new Promise((resolve)=>{gapi.load('client',async()=>{await gapi.client.init({});await gapi.client.load('drive','v3');resolve();});});}
-async function conectarGoogle(){await ensureGapiLoaded();if(!tokenClient){tokenClient=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,callback:(tok)=>{accessToken=tok.access_token;alert("Conectado ao Google!");}});}tokenClient.requestAccessToken({prompt:'consent'});}
-async function salvarNoDrive(){await ensureGapiLoaded();if(!accessToken)return alert("Conecte ao Google primeiro.");const data={talhoes:db.get('talhoes',[]),estoque:db.get('estoque',[]),aplicacoes:db.get('aplicacoes',[]),salvoEm:new Date().toISOString()};const file=new File([new Blob([JSON.stringify(data)],{type:"application/json"})],"grao-digital-backup.json",{type:"application/json"});const metadata={name:file.name,mimeType:file.type};const boundary="-------314159265358979323846";const delimiter="\\r\\n--"+boundary+"\\r\\n";const close="\\r\\n--"+boundary+"--";const reader=await file.text();const body=delimiter+'Content-Type: application/json\\r\\n\\r\\n'+JSON.stringify(metadata)+delimiter+'Content-Type: '+file.type+'\\r\\n\\r\\n'+reader+close;await gapi.client.request({path:'/upload/drive/v3/files',method:'POST',params:{uploadType:'multipart'},headers:{'Content-Type':'multipart/related; boundary=\"'+boundary+'\"'},body});alert("Backup salvo no Drive!");}
-async function carregarDoDrive(){await ensureGapiLoaded();if(!accessToken)return alert("Conecte ao Google primeiro.");const res=await gapi.client.drive.files.list({q:"name = 'grao-digital-backup.json' and trashed = false",pageSize:1,fields:"files(id,name)"});if(!res.result.files||!res.result.files.length)return alert("Arquivo não encontrado no Drive.");const fileId=res.result.files[0].id;const content=await gapi.client.drive.files.get({fileId,alt:'media'});try{const o=JSON.parse(content.body);if(o.talhoes)db.set('talhoes',o.talhoes);if(o.estoque)db.set('estoque',o.estoque);if(o.aplicacoes)db.set('aplicacoes',o.aplicacoes);render();alert("Backup carregado!");}catch(e){alert("Conteúdo inválido.");}}
+// ====== Actions ======
+$("btnAddTalhao").onclick = () => {
+  const n = $("inpTalhao").value.trim(); if(!n) return;
+  const arr = LS.get(K.TALHOES, []); if(arr.includes(n)) return alert("Já existe.");
+  arr.push(n); LS.set(K.TALHOES, arr); $("inpTalhao").value=""; renderTalhoes();
+};
 
-// limpeza
-function apagarTudo(){if(confirm("Tem certeza? Isso removerá todos os dados locais.")){localStorage.removeItem('talhoes');localStorage.removeItem('estoque');localStorage.removeItem('aplicacoes');render();}}
+$("btnAddEstoque").onclick = () => {
+  const nome = $("inpNomeInsumo").value.trim();
+  const qtd = parseFloat($("inpQtdInsumo").value||"0");
+  const preco = parseFloat($("inpPrecoInsumo").value||"0");
+  if(!nome || !qtd || !preco) return alert("Preencha insumo, quantidade e preço.");
+  const arr = LS.get(K.ESTOQUE, []);
+  const exist = arr.find(e=>e.nome.toLowerCase()===nome.toLowerCase());
+  if(exist){ exist.qtd += qtd; exist.preco = preco; }
+  else arr.push({nome, qtd, preco});
+  LS.set(K.ESTOQUE, arr);
+  $("inpNomeInsumo").value=""; $("inpQtdInsumo").value=""; $("inpPrecoInsumo").value="";
+  renderEstoque();
+};
 
-// eventos
-document.getElementById('mm')?.addEventListener('change',renderResumoTabela);
-document.getElementById('yy')?.addEventListener('change',renderResumoTabela);
+$("btnSalvarAplicacao").onclick = () => {
+  const talhao = $("selTalhao").value;
+  const insumo = $("selInsumo").value;
+  const desc = $("inpDesc").value.trim();
+  const qtd = parseFloat($("inpQtd").value||"0");
+  if(!talhao || !insumo || !qtd) return alert("Selecione talhão, insumo e quantidade.");
+  const est = LS.get(K.ESTOQUE, []);
+  const item = est.find(e=>e.nome===insumo);
+  if(!item) return alert("Insumo não está no estoque.");
+  if(item.qtd < qtd) return alert("Estoque insuficiente.");
+  // custo proporcional (preço é por 50kg)
+  const custo = (item.preco/50) * qtd;
+  item.qtd -= qtd;
+  LS.set(K.ESTOQUE, est);
+  const d = new Date();
+  const reg = {
+    talhao, insumo, desc, qtd,
+    custo, data: d.toLocaleDateString("pt-BR"),
+    mes: String(d.getMonth()+1).padStart(2,"0"),
+    ano: String(d.getFullYear())
+  };
+  const arr = LS.get(K.APLICACOES, []); arr.push(reg); LS.set(K.APLICACOES, arr);
+  $("inpDesc").value=""; $("inpQtd").value="";
+  renderAplicacoes(); renderEstoque(); renderResumo();
+};
 
-// PWA
-if('serviceWorker' in navigator){navigator.serviceWorker.register('service-worker.js');}
-render();
+$("btnExportJSON").onclick = () => {
+  const payload = {
+    talhoes: LS.get(K.TALHOES, []),
+    estoque: LS.get(K.ESTOQUE, []),
+    aplicacoes: LS.get(K.APLICACOES, []),
+    exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "grao-digital-backup.json";
+  a.click();
+};
+
+$("fileImportJSON").onchange = ev => {
+  const f = ev.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const data = JSON.parse(rd.result);
+      LS.set(K.TALHOES, data.talhoes||[]);
+      LS.set(K.ESTOQUE, data.estoque||[]);
+      LS.set(K.APLICACOES, data.aplicacoes||[]);
+      renderAll(); alert("Backup importado.");
+    }catch(e){ alert("Arquivo inválido."); }
+  };
+  rd.readAsText(f);
+};
+
+$("btnGConnect").onclick = initGoogle;
+$("btnGSalvar").onclick = salvarNoDrive;
+$("btnGCarregar").onclick = carregarDoDrive;
+
+$("btnCSV").onclick = () => {
+  const rows = [...document.querySelectorAll("#tblResumo tr")].map(tr=>[...tr.children].map(td=>td.innerText));
+  const csv = rows.map(r=> r.map(c=>`"${c.replaceAll('"','""')}"`).join(";")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "resumo.csv"; a.click();
+};
+
+$("btnPDF").onclick = () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text("Resumo Mensal - Grão Digital", 14, 16);
+  const head = [["Insumo","Kg aplicados","Gasto (R$)","Mês/Ano"]];
+  const body = [...document.querySelectorAll("#tbodyResumo tr")].map(tr=>[...tr.children].map(td=>td.innerText));
+  doc.autoTable({head, body, startY: 22});
+  doc.save("resumo.pdf");
+};
+
+$("btnWipe").onclick = () => {
+  if(confirm("Tem certeza? Isso apagará tudo.")){ LS.wipe(); renderAll(); }
+};
+
+// filtro resumo
+$("selMes").onchange = renderResumo;
+$("selAno").onchange = renderResumo;
+
+// ====== Navigation ======
+document.querySelectorAll(".nav button").forEach(b=>{
+  b.onclick = () => {
+    document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    document.querySelectorAll("main .card").forEach(c=>c.classList.remove("active"));
+    document.getElementById(b.dataset.go).classList.add("active");
+  };
+});
+
+function renderAll(){
+  renderTalhoes(); renderEstoque(); renderAplicacoes(); renderResumo();
+}
+renderAll();
