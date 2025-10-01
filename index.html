@@ -4,30 +4,128 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Grão Digital</title>
+  <meta name="theme-color" content="#0ea15f">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icone-192.png">
-  <meta name="theme-color" content="#0ea15f">
   <link rel="stylesheet" href="estilo.css">
+
+  <!-- Charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- PDF (captura de tela) -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
-  <header class="hero"><h1>🌱 Grão Digital</h1></header>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="logo">🌱</div>
+      <h1>Grão Digital</h1>
+      <p class="subtitle">Gestão de talhões, aplicações e custos</p>
+    </div>
+  </header>
+
   <main>
-    <section id="sec-historico" class="card">
-      <h2>📈 Histórico</h2>
-      <h3>Kg aplicados por mês</h3>
-      <canvas id="graficoLinhaKg"></canvas>
-      <h3>Gasto (R$) por mês</h3>
-      <canvas id="graficoLinhaGasto"></canvas>
+    <!-- TALHÕES -->
+    <section id="sec-talhoes" class="card">
+      <h2>🌿 Talhões</h2>
       <div class="row gap">
-        <button id="btnCsvHistorico">Exportar CSV</button>
-        <button id="btnPdfHistorico">Exportar PDF</button>
+        <input id="inpTalhao" placeholder="Nome do talhão">
+        <button class="btn" id="btnAddTalhao">Adicionar</button>
+      </div>
+      <ul id="listaTalhoes" class="list"></ul>
+    </section>
+
+    <!-- REGISTROS -->
+    <section id="sec-registros" class="card hidden">
+      <h2>📝 Registros de Adubação</h2>
+      <div class="grid g-4">
+        <label><span>Talhão</span><select id="selTalhao"></select></label>
+        <label><span>Insumo (do estoque)</span><select id="selInsumo"></select></label>
+        <label><span>Qtd aplicada (kg)</span><input id="inpQtd" type="number" min="0" step="0.01"></label>
+        <label class="full"><span>Descrição (opcional)</span><input id="inpDesc"></label>
+      </div>
+      <button class="btn wide" id="btnSalvarAplic">Salvar aplicação</button>
+      <h3 class="mt">Últimas aplicações</h3>
+      <div id="listaAplics" class="table-wrap"></div>
+    </section>
+
+    <!-- ESTOQUE -->
+    <section id="sec-estoque" class="card hidden">
+      <h2>📦 Estoque</h2>
+      <div class="grid g-3">
+        <label><span>Nome do insumo</span><input id="insNome"></label>
+        <label><span>Quantidade (kg)</span><input id="insQtd" type="number" min="0" step="0.01"></label>
+        <label><span>Preço por saco (50kg)</span><input id="insPreco" type="number" min="0" step="0.01"></label>
+      </div>
+      <button class="btn" id="btnAddEstoque">Adicionar ao Estoque</button>
+      <h3 class="mt">Itens no estoque</h3>
+      <div id="listaEstoque" class="table-wrap"></div>
+    </section>
+
+    <!-- RESUMO -->
+    <section id="sec-resumo" class="card hidden">
+      <h2>📊 Resumo Mensal</h2>
+      <div class="grid g-3">
+        <label><span>Mês</span><select id="selMes"></select></label>
+        <label><span>Ano</span><select id="selAno"></select></label>
+        <div class="row gap align-end">
+          <button class="btn" id="btnFiltrarResumo">Filtrar</button>
+          <button class="btn outline" id="btnCsv">CSV</button>
+          <button class="btn outline" id="btnPdf">PDF</button>
+          <button class="btn" id="btnTipoKg">Kg: Barras/Pizza</button>
+          <button class="btn" id="btnTipoGasto">R$: Barras/Pizza</button>
+        </div>
+      </div>
+      <div id="tabelaResumo" class="table-wrap"></div>
+      <div class="charts">
+        <div class="chart-box">
+          <h3>Kg aplicados</h3>
+          <canvas id="graficoKg"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>Gasto (R$)</h3>
+          <canvas id="graficoGasto"></canvas>
+        </div>
       </div>
     </section>
+
+    <!-- HISTÓRICO -->
+    <section id="sec-historico" class="card hidden">
+      <h2>📈 Histórico</h2>
+      <div id="historicoContainer">
+        <div class="chart-box">
+          <h3>Kg aplicados por mês</h3>
+          <canvas id="graficoLinhaKg"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>Gasto (R$) por mês</h3>
+          <canvas id="graficoLinhaGasto"></canvas>
+        </div>
+        <div class="row gap mt">
+          <button class="btn outline" id="btnCsvHistorico">Exportar CSV</button>
+          <button class="btn" id="btnPdfHistorico">Exportar PDF (gráficos + tabela)</button>
+        </div>
+        <div id="tabelaHistorico" class="table-wrap mt"></div>
+      </div>
+    </section>
+
+    <!-- CONFIG -->
+    <section id="sec-config" class="card hidden">
+      <h2>⚙️ Configurações</h2>
+      <button class="btn danger" id="btnLimpar">Apagar todos os dados</button>
+    </section>
   </main>
+
+  <!-- Bottom Nav -->
   <nav class="bottom">
-    <button data-go="sec-historico" class="active">📈</button>
+    <button data-go="sec-talhoes" class="active">🌿 Talhões</button>
+    <button data-go="sec-registros">📝 Registros</button>
+    <button data-go="sec-estoque">📦 Estoque</button>
+    <button data-go="sec-resumo">📊 Resumo</button>
+    <button data-go="sec-historico">📈 Histórico</button>
+    <button data-go="sec-config">⚙️ Config</button>
   </nav>
+
   <script src="app.js"></script>
 </body>
 </html>

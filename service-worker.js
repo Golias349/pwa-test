@@ -1,1 +1,1 @@
-self.addEventListener('install',e=>{e.waitUntil(caches.open('gd').then(c=>c.addAll(['./','index.html','estilo.css','app.js','manifest.json'])))})
+self.addEventListener('install',e=>{e.waitUntil(caches.open('gd-v1').then(c=>c.addAll(['./','index.html','estilo.css','app.js','manifest.json','icone-192.png','icone-512.png'])))})
