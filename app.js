@@ -1,76 +1,47 @@
-let talhoes = JSON.parse(localStorage.getItem('talhoes')) || [];
-let registros = JSON.parse(localStorage.getItem('registros')) || [];
-let estoque = JSON.parse(localStorage.getItem('estoque')) || [];
-
-document.getElementById("data").textContent = new Date().toLocaleDateString("pt-BR", {weekday:"long", day:"numeric", month:"long", year:"numeric"});
-
-function mostrar(secao){
-  document.querySelectorAll('.secao').forEach(s=>s.style.display="none");
-  document.getElementById(secao).style.display="block";
-  if(secao==="estoque") atualizarResumoMensal();
-}
-
-function adicionarTalhao(){
-  const nome=document.getElementById("nomeTalhao").value;
-  if(!nome) return;
-  talhoes.push(nome);
-  localStorage.setItem("talhoes", JSON.stringify(talhoes));
-  atualizarListas();
-}
-
-function salvarAplicacao(){
-  const talhao=document.getElementById("talhaoSelect").value;
-  const tipo=document.getElementById("tipoInsumo").value;
-  const desc=document.getElementById("descricao").value;
-  const qtd=parseFloat(document.getElementById("quantidade").value)||0;
-
-  if(!talhao||!tipo||!qtd) return;
-
-  let precoUnit=0;
-  const itemEstoque = estoque.find(i=>i.nome===tipo);
-  if(itemEstoque){
-    precoUnit = (itemEstoque.preco/50);
-    itemEstoque.qtd -= qtd;
-  }
-
-  registros.push({talhao,tipo,desc,qtd,precoUnit,data:new Date().toISOString()});
-  localStorage.setItem("registros", JSON.stringify(registros));
-  localStorage.setItem("estoque", JSON.stringify(estoque));
-  atualizarListas();
-}
-
-function adicionarEstoque(){
-  const nome=document.getElementById("nomeInsumo").value;
-  const qtd=parseFloat(document.getElementById("qtdInsumo").value)||0;
-  const preco=parseFloat(document.getElementById("precoInsumo").value)||0;
-  if(!nome||!qtd||!preco) return;
-  estoque.push({nome,qtd,preco});
-  localStorage.setItem("estoque", JSON.stringify(estoque));
-  atualizarListas();
-}
-
-function atualizarResumoMensal(){
-  const resumo={};
-  registros.forEach(r=>{
-    const mes=new Date(r.data).toLocaleString("pt-BR",{month:"long",year:"numeric"});
-    if(!resumo[mes]) resumo[mes]={};
-    if(!resumo[mes][r.tipo]) resumo[mes][r.tipo]={kg:0,gasto:0};
-    resumo[mes][r.tipo].kg+=r.qtd;
-    resumo[mes][r.tipo].gasto+=r.qtd*r.precoUnit;
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("data").innerText = new Date().toLocaleDateString("pt-BR", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric"
   });
-  const tabela=document.getElementById("resumoMensal");
-  tabela.innerHTML="<tr><th>Mês</th><th>Insumo</th><th>Kg aplicados</th><th>Gasto (R$)</th></tr>";
-  for(let mes in resumo){
-    for(let insumo in resumo[mes]){
-      tabela.innerHTML+=`<tr><td>${mes}</td><td>${insumo}</td><td>${resumo[mes][insumo].kg}</td><td>${resumo[mes][insumo].gasto.toFixed(2)}</td></tr>`;
-    }
+
+  mostrar("talhoes");
+});
+
+function mostrar(secao) {
+  const conteudo = document.getElementById("conteudo");
+  conteudo.innerHTML = "";
+
+  if (secao === "talhoes") {
+    conteudo.innerHTML = `
+      <div class="card">
+        <h2>🌿 Talhões</h2>
+        <input type="text" placeholder="Nome do Talhão">
+        <button>Adicionar Talhão</button>
+      </div>`;
+  } else if (secao === "registros") {
+    conteudo.innerHTML = `
+      <div class="card">
+        <h2>📋 Registros de Adubação</h2>
+        <select><option>Selecione o Talhão</option></select>
+        <select><option>Selecione o Insumo</option></select>
+        <input type="text" placeholder="Descrição">
+        <input type="number" placeholder="Quantidade (kg)">
+        <button>Salvar Aplicação</button>
+      </div>`;
+  } else if (secao === "estoque") {
+    conteudo.innerHTML = `
+      <div class="card">
+        <h2>📦 Estoque</h2>
+        <input type="text" placeholder="Nome do Insumo">
+        <input type="number" placeholder="Quantidade (kg)">
+        <input type="number" placeholder="Preço (R$)">
+        <button>Adicionar ao Estoque</button>
+      </div>`;
+  } else if (secao === "config") {
+    conteudo.innerHTML = `
+      <div class="card">
+        <h2>⚙️ Configurações</h2>
+        <button>Exportar Backup</button>
+        <button>Importar Backup</button>
+      </div>`;
   }
 }
-
-function atualizarListas(){
-  document.getElementById("listaTalhoes").innerHTML=talhoes.map(t=>`<li>${t}</li>`).join("");
-  document.getElementById("talhaoSelect").innerHTML=talhoes.map(t=>`<option>${t}</option>`).join("");
-  document.getElementById("listaEstoque").innerHTML=estoque.map(e=>`<li>${e.nome} - ${e.qtd}kg - R$${e.preco}/saco</li>`).join("");
-  document.getElementById("listaRegistros").innerHTML=registros.slice(-5).map(r=>`<li>${r.talhao} - ${r.tipo} (${r.qtd}kg)</li>`).join("");
-}
-atualizarListas();
