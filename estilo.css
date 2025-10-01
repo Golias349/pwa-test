@@ -4,4 +4,4 @@ body{font-family:sans-serif;background:#0b1215;color:#fff;margin:0;padding-botto
 .bottom{position:fixed;bottom:0;left:0;right:0;background:#0e2b23;display:flex}
 .bottom button{flex:1;padding:10px;border:none;background:#0e2b23;color:#bfffe0}
 .bottom button.active{background:#10a760;color:#07140e}
-canvas{width:100%!important;height:auto!important}
+canvas{width:100%!important;height:auto!important;max-height:300px}

@@ -38,18 +38,20 @@
     </section>
     <section id="sec-resumo" class="card hidden">
       <h2>📊 Resumo Mensal</h2>
-      <select id="selMes"></select>
-      <select id="selAno"></select>
-      <button id="btnFiltrarResumo">Filtrar</button>
-      <button id="btnCsv">CSV</button>
-      <button id="btnPdf">PDF</button>
       <div id="tabelaResumo"></div>
       <h3>Kg aplicados</h3>
-      <canvas id="graficoKg" style="max-height:300px"></canvas>
+      <canvas id="graficoKg"></canvas>
       <button id="btnTipoKg">Alternar Gráfico</button>
       <h3>Gasto (R$)</h3>
-      <canvas id="graficoGasto" style="max-height:300px"></canvas>
+      <canvas id="graficoGasto"></canvas>
       <button id="btnTipoGasto">Alternar Gráfico</button>
+    </section>
+    <section id="sec-historico" class="card hidden">
+      <h2>📈 Histórico</h2>
+      <h3>Kg aplicados por mês</h3>
+      <canvas id="graficoLinhaKg"></canvas>
+      <h3>Gasto (R$) por mês</h3>
+      <canvas id="graficoLinhaGasto"></canvas>
     </section>
     <section id="sec-config" class="card hidden">
       <h2>⚙️ Configurações</h2>
@@ -61,6 +63,7 @@
     <button data-go="sec-registros">📝</button>
     <button data-go="sec-estoque">📦</button>
     <button data-go="sec-resumo">📊</button>
+    <button data-go="sec-historico">📈</button>
     <button data-go="sec-config">⚙️</button>
   </nav>
   <script src="app.js"></script>
