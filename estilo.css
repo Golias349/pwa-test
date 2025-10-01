@@ -1,38 +1,44 @@
-/* Theme */
-:root{
-  --bg:#0b1215; --card:#111a1e; --text:#edf6f0; --muted:#9bb4a6;
-  --green:#16a34a; --green-2:#0ea15f; --red:#e11d48; --line:#1a2a2f;
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: sans-serif;
+  background: #0b1215;
+  color: #fff;
 }
-*{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,Segoe UI,Roboto,Arial}
-.hero{background:linear-gradient(180deg,#1cc06a,#0c7a47);padding:22px 12px;border-bottom:1px solid #124630}
-.hero-inner{max-width:1100px;margin:0 auto;text-align:center}
-.logo{font-size:38px}
-.hero h1{margin:.2rem 0}
-.subtitle{color:#d5ffe9;margin:0}
-main{max-width:1100px;margin:18px auto;padding:0 12px 100px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:16px 0}
-.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.align-end{align-items:flex-end}
-.grid{display:grid;gap:10px}
-.grid.g-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-.grid.g-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-@media(max-width:900px){.grid.g-3,.grid.g-4{grid-template-columns:1fr}}
-input,select,button{border-radius:10px;border:1px solid var(--line);background:#0a1215;color:var(--text);padding:10px 12px;outline:none}
-button.btn{background:var(--green);border:0;cursor:pointer}
-button.btn.wide{width:100%}
-button.btn.outline{background:transparent;border:1px solid var(--green);color:#b8ffd5}
-button.btn.danger{background:var(--red)}
-.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left}
-th{background:#0f201d}
-.list{list-style:none;margin:0;padding:0}
-.list li{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--line);background:#0a1215;border-radius:10px;padding:10px;margin:8px 0}
-.mt{margin-top:14px}
-.charts{display:grid;gap:16px}
-.chart-box{background:#0a1215;border:1px solid var(--line);border-radius:12px;padding:12px}
-canvas{width:100% !important;height:auto !important;max-height:320px}
-.bottom{position:fixed;left:0;right:0;bottom:0;background:#0e2b23;border-top:1px solid #15352b;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:10px;z-index:5}
-.bottom button{background:#0e2b23;border:1px solid #184f3d;color:#bfffe0;padding:10px;border-radius:12px}
-.bottom button.active{background:#10a760;color:#07140e;font-weight:700}
-.hidden{display:none}
+
+.hero {background:#0f4; padding:10px; text-align:center;}
+
+.card {background:#111a1e; margin:10px; padding:10px; border-radius:10px;}
+
+.main-scroll {
+  max-height: calc(100vh - 180px); /* ajusta se header/navbar mudarem */
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.card-scroll {
+  max-height: 300px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border:1px solid #333;
+  border-radius:8px;
+  padding:5px;
+}
+
+/* scroll fino */
+.main-scroll, .card-scroll {scrollbar-width: thin; scrollbar-color: #2e8b57 #0f1417;}
+.main-scroll::-webkit-scrollbar, .card-scroll::-webkit-scrollbar {width:8px;}
+.main-scroll::-webkit-scrollbar-thumb, .card-scroll::-webkit-scrollbar-thumb {background:#2e8b57; border-radius:8px;}
+.main-scroll::-webkit-scrollbar-track, .card-scroll::-webkit-scrollbar-track {background:transparent;}
+
+.navbar-fixa {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  background: #0f1417;
+  padding: 10px;
+}
