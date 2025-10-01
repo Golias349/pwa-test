@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Grão Digital 🌱</title>
   <link rel="stylesheet" href="estilo.css">
-  <link rel="manifest" href="manifesto.json">
+  <link rel="manifest" href="manifest.json">
+  <script defer src="app.js"></script>
 </head>
 <body>
   <header>
@@ -15,13 +16,17 @@
 
   <main id="conteudo"></main>
 
-  <nav>
+  <nav class="navbar">
     <button onclick="mostrar('talhoes')">🌿 Talhões</button>
     <button onclick="mostrar('registros')">📋 Registros</button>
     <button onclick="mostrar('estoque')">📦 Estoque</button>
     <button onclick="mostrar('config')">⚙️ Configurações</button>
   </nav>
 
-  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js');
+    }
+  </script>
 </body>
 </html>

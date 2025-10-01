@@ -1,7 +1,13 @@
 self.addEventListener("install", e => {
   e.waitUntil(
     caches.open("grao-digital").then(cache => {
-      return cache.addAll(["/", "/index.html", "/estilo.css", "/app.js"]);
+      return cache.addAll([
+        "/",
+        "/index.html",
+        "/estilo.css",
+        "/app.js",
+        "/manifest.json"
+      ]);
     })
   );
 });
