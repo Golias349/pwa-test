@@ -1,1 +1,4 @@
-self.addEventListener('install',e=>{e.waitUntil(caches.open('gd').then(c=>c.addAll(['./','index.html','estilo.css','manifest.json'])))})
+self.addEventListener('install', e=>{
+  e.waitUntil(caches.open('grao-digital-v3').then(c=>c.addAll(['./','index.html','app.js','manifest.json','icone-192.png','icone-512.png'])));
+});
+self.addEventListener('fetch', e=>{ e.respondWith(caches.match(e.request).then(r=> r || fetch(e.request))); });
