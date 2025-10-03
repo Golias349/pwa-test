@@ -1,129 +1,40 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Grão Digital</title>
-  <meta name="theme-color" content="#108a42"/>
-  <link rel="manifest" href="manifest.json"/>
-  <link rel="icon" href="icon-192.png"/>
-  <link rel="apple-touch-icon" href="icon-512.png"/>
-  <link rel="stylesheet" href="estilo.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e7f3d">
+  <link rel="icon" href="icone-192.png">
+  <link rel="apple-touch-icon" href="icone-192.png">
+  <link rel="stylesheet" href="estilo.css">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script defer src="app.js"></script>
 </head>
 <body>
   <header class="app-header">
-    <div class="logo">🌱</div>
-    <div class="titulo">
-      <h1>Grão Digital</h1>
-      <p>Gestão de talhões, aplicações e custos</p>
+    <div class="brand">
+      <span class="sprout">🌱</span>
+      <div>
+        <h1>Grão Digital</h1>
+        <small>Gestão de talhões, aplicações e custos</small>
+      </div>
     </div>
+    <div id="hoje" class="date"></div>
   </header>
 
-  <main id="conteudo">
-    <section id="tela-talhoes" class="card tela ativa">
-      <h2>🌿 Talhões</h2>
-      <div class="linha">
-        <input id="nomeTalhao" class="input" placeholder="Nome do Talhão"/>
-        <button class="btn" onclick="adicionarTalhao()">Adicionar Talhão</button>
-      </div>
-      <ul id="listaTalhoes" class="lista"></ul>
-    </section>
+  <main id="conteudo" class="conteudo"></main>
 
-    <section id="tela-registros" class="card tela">
-      <h2>📝 Registros de Adubação</h2>
-      <div class="grid-4">
-        <select id="selTalhao" class="input"></select>
-        <select id="selInsumo" class="input"></select>
-        <input id="descAplic" class="input" placeholder="Descrição (opcional)"/>
-        <input id="qtdAplic" class="input" type="number" min="0" step="0.1" placeholder="Qtde aplicada (kg)"/>
-      </div>
-      <small>O custo usa o preço do estoque (saco 50kg).</small>
-      <div class="mt-8">
-        <button class="btn amplo" onclick="salvarAplicacao()">Salvar aplicação</button>
-      </div>
-      <h3 class="mt-16">Últimas aplicações</h3>
-      <div id="ultimosRegistros" class="lista-registros"></div>
-    </section>
-
-    <section id="tela-estoque" class="card tela">
-      <h2>📦 Estoque</h2>
-      <div class="grid-3">
-        <input id="nomeInsumo" class="input" placeholder="Ex.: NPK"/>
-        <input id="qtdInsumo" class="input" type="number" min="0" step="0.1" placeholder="Ex.: 1000 (kg)"/>
-        <input id="precoSaco" class="input" type="number" min="0" step="0.01" placeholder="Preço por saco (50kg)"/>
-      </div>
-      <button class="btn amplo" onclick="adicionarEstoque()">Adicionar ao Estoque</button>
-
-      <h3 class="mt-16">Itens</h3>
-      <table class="tabela">
-        <thead><tr><th>Insumo</th><th>Qtd (kg)</th><th>Preço 50kg (R$)</th><th>Ações</th></tr></thead>
-        <tbody id="tbodyEstoque"></tbody>
-      </table>
-    </section>
-
-    <section id="tela-resumo" class="card tela">
-      <h2>📊 Resumo Mensal</h2>
-      <div class="grid-3">
-        <select id="mesResumo" class="input"></select>
-        <select id="anoResumo" class="input"></select>
-        <div class="linha">
-          <button class="btn" onclick="gerarResumo()">Filtrar</button>
-          <button class="btn" onclick="exportarCSV()">Exportar CSV</button>
-          <button class="btn" onclick="exportarPDF()">Exportar PDF</button>
-        </div>
-      </div>
-      <table class="tabela mt-8">
-        <thead><tr><th>Insumo</th><th>Kg aplicados</th><th>Gasto (R$)</th><th>Mês/Ano</th></tr></thead>
-        <tbody id="tbodyResumo"></tbody>
-        <tfoot><tr><th>Total</th><th id="totalKg">0</th><th id="totalGasto">R$ 0,00</th><th></th></tr></tfoot>
-      </table>
-      <div class="grid-2 mt-16">
-        <div class="chart-card"><h4>Kg aplicados por insumo</h4><canvas id="grafKg"></canvas></div>
-        <div class="chart-card"><h4>Gasto por insumo (R$)</h4><canvas id="grafR$"></canvas></div>
-      </div>
-    </section>
-
-    <section id="tela-historico" class="card tela">
-      <h2>📁 Histórico / Backup</h2>
-      <div class="grid-2">
-        <button class="btn amplo" onclick="exportarBackupLocal()">Exportar backup (JSON)</button>
-        <div class="linha">
-          <input type="file" id="fileImport" accept="application/json"/>
-          <button class="btn" onclick="importarBackupLocal()">Importar backup (JSON)</button>
-        </div>
-      </div>
-      <h3 class="mt-16">Backup no Google Drive (opcional)</h3>
-      <p>Conecte com sua conta Google para salvar/recuperar um backup JSON no seu Drive.</p>
-      <div class="grid-3">
-        <button class="btn" onclick="conectarGoogle()">Conectar ao Google</button>
-        <button class="btn" onclick="salvarNoDrive()">Salvar no Drive</button>
-        <button class="btn" onclick="carregarDoDrive()">Carregar do Drive</button>
-      </div>
-      <pre id="logDrive" class="log"></pre>
-    </section>
-
-    <section id="tela-config" class="card tela">
-      <h2>⚙️ Configurações</h2>
-      <button class="btn perigo" onclick="apagarTudo()">Apagar TODOS os dados</button>
-    </section>
-  </main>
-
-  <nav class="bottom-nav">
-    <button class="tab-btn ativa" data-alvo="tela-talhoes">🌿 Talhões</button>
-    <button class="tab-btn" data-alvo="tela-registros">📑 Registros</button>
-    <button class="tab-btn" data-alvo="tela-estoque">📦 Estoque</button>
-    <button class="tab-btn" data-alvo="tela-resumo">📊 Resumo</button>
-    <button class="tab-btn" data-alvo="tela-historico">📁 Histórico</button>
-    <button class="tab-btn" data-alvo="tela-config">⚙️ Config</button>
+  <nav class="tabs">
+    <button data-tab="talhoes"><i class="ri-seedling-line"></i><span>Talhões</span></button>
+    <button data-tab="registros"><i class="ri-ball-pen-line"></i><span>Registros</span></button>
+    <button data-tab="estoque"><i class="ri-archive-2-line"></i><span>Estoque</span></button>
+    <button data-tab="resumo"><i class="ri-bar-chart-2-line"></i><span>Resumo</span></button>
+    <button data-tab="config"><i class="ri-settings-3-line"></i><span>Config</span></button>
   </nav>
 
-  <script src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', ()=>navigator.serviceWorker.register('service-worker.js'));
-    }
-  </script>
+  <div id="toast" class="toast" role="status"></div>
 </body>
 </html>
