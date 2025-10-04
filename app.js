@@ -1,4 +1,4 @@
-/* JS do Grão Digital — Resumo com Talhão + Insumo */
+/* Grão Digital v4 — Resumo com Talhão; SW força atualização; tema verde */
 const db={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),del:k=>localStorage.removeItem(k)};
 const K={TALHOES:'grao.talhoes',ESTOQUE:'grao.estoque',REG:'grao.registros'};
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
@@ -28,7 +28,7 @@ $('#mesResumo')?.addEventListener('change',renderResumo);$('#anoResumo')?.addEve
 
 function aggregateResumo(m,a){const regs=db.get(K.REG,[]);const out={rows:[],totKg:0,totG:0};const map=new Map();regs.forEach(r=>{const [d,mm,aa]=r.data.split('/').map(x=>parseInt(x));if(mm===m&&aa===a){const key=r.talhao+'||'+r.insumo;const g=map.get(key)||{talhao:r.talhao,insumo:r.insumo,kg:0,gasto:0};g.kg+=r.qtd;g.gasto+=custoAplicacao(r.insumo,r.qtd);map.set(key,g);out.totKg+=r.qtd;out.totG+=custoAplicacao(r.insumo,r.qtd);}});out.rows=[...map.values()].sort((x,y)=>x.talhao.localeCompare(y.talhao)||x.insumo.localeCompare(y.insumo));return out;}
 
-function renderResumo(){const m=parseInt($('#mesResumo').value),a=parseInt($('#anoResumo').value);const ag=aggregateResumo(m,a);const tb=$('#tabResumo tbody');tb.innerHTML='';ag.rows.forEach(r=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${r.talhao}</td><td>${r.insumo}</td><td>${r.kg.toFixed(2)}</td><td>${r.gasto.toFixed(2)}</td><td>${String(m).padStart(2,'0')}/${a}</td>`;tb.append(tr);});$('#resKg').textContent=ag.totKg.toFixed(2);$('#resR$').textContent=ag.totG.toFixed(2);}
+function renderResumo(){const m=parseInt($('#mesResumo').value),a=parseInt($('#anoResumo').value);const ag=aggregateResumo(m,a);const tb=$('#tabResumo tbody');tb.innerHTML='';ag.rows.forEach(r=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${r.talhao}</td><td>${r.insumo}</td><td>${r.kg.toFixed(2)}</td><td>${fmtR$(r.gasto)}</td><td>${String(m).padStart(2,'0')}/${a}</td>`;tb.append(tr);});$('#resKg').textContent=ag.totKg.toFixed(2);$('#resR$').textContent=fmtR$(ag.totG);}
 
 /* ===== Exportações ===== */
 $('#btnExportCSV').onclick=()=>{const m=parseInt($('#mesResumo').value),a=parseInt($('#anoResumo').value);const ag=aggregateResumo(m,a);const rows=[['Talhão','Insumo','Kg aplicados','Gasto (R$)','Mês/Ano']].concat(ag.rows.map(r=>[r.talhao,r.insumo,r.kg.toFixed(2),r.gasto.toFixed(2),`${String(m).padStart(2,'0')}/${a}`]));rows.push(['TOTAL','','',ag.totG.toFixed(2),`${String(m).padStart(2,'0')}/${a}`]);const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');const aEl=document.createElement('a');aEl.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));aEl.download=`resumo-${a}-${String(m).padStart(2,'0')}.csv`;aEl.click();};

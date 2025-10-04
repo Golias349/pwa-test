@@ -6,14 +6,14 @@
   <title>Grão Digital</title>
   <meta name="theme-color" content="#0d5f34"/>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icone-192.png">
+  <link rel="icon" type="image/svg+xml" href="icone-grao.svg">
   <link rel="apple-touch-icon" href="icone-192.png">
   <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
   <header class="app-header">
     <div class="brand">
-      <span class="logo">🌱</span>
+      <img src="icone-grao.svg" alt="Grão" class="logo-svg"/>
       <div class="titles">
         <h1>Grão Digital</h1>
         <small>Gestão de talhões, aplicações e custos</small>
@@ -23,7 +23,7 @@
 
   <main id="conteudo" class="conteudo">
     <section id="sec-talhoes" class="card">
-      <h2>🌿 Talhões</h2>
+      <h2>🌾 Talhões</h2>
       <div class="row gap">
         <input id="nomeTalhao" class="inp" placeholder="Nome do Talhão">
         <button class="btn" id="btnAddTalhao">Adicionar Talhão</button>
@@ -32,7 +32,7 @@
     </section>
 
     <section id="sec-registros" class="card hidden">
-      <h2>📝 Registros de Adubação</h2>
+      <h2>🧾 Registros de Adubação</h2>
       <div class="grid grid-4 gap">
         <select id="regTalhao" class="inp"></select>
         <select id="regInsumo" class="inp"></select>
@@ -110,7 +110,7 @@
           <button class="btn btn-sec" id="btnGoogleSalvar">Salvar no Drive</button>
           <button class="btn btn-sec" id="btnGoogleCarregar">Carregar do Drive</button>
         </div>
-        
+        <small class="hint">Usa OAuth do Google Drive. Precisa autorizar na sua conta Google.</small>
       </div>
 
       <div class="card-ghost danger">
@@ -121,7 +121,7 @@
   </main>
 
   <nav class="bottom-nav">
-    <button data-tab="talhoes" class="nav-btn active">🌿 Talhões</button>
+    <button data-tab="talhoes" class="nav-btn active">🌾 Talhões</button>
     <button data-tab="registros" class="nav-btn">🧾 Registros</button>
     <button data-tab="estoque" class="nav-btn">📦 Estoque</button>
     <button data-tab="resumo" class="nav-btn">📊 Resumo</button>
