@@ -6,14 +6,14 @@
   <title>Grão Digital</title>
   <meta name="theme-color" content="#0d5f34"/>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/svg+xml" href="icone-grao.svg">
+  <link rel="icon" href="icone-192.png">
   <link rel="apple-touch-icon" href="icone-192.png">
   <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
   <header class="app-header">
     <div class="brand">
-      <img src="icone-grao.svg" alt="Grão" class="logo-svg"/>
+      <span class="logo">🌱</span>
       <div class="titles">
         <h1>Grão Digital</h1>
         <small>Gestão de talhões, aplicações e custos</small>
@@ -22,8 +22,9 @@
   </header>
 
   <main id="conteudo" class="conteudo">
+    <!-- Talhões -->
     <section id="sec-talhoes" class="card">
-      <h2>🌾 Talhões</h2>
+      <h2>🌿 Talhões</h2>
       <div class="row gap">
         <input id="nomeTalhao" class="inp" placeholder="Nome do Talhão">
         <button class="btn" id="btnAddTalhao">Adicionar Talhão</button>
@@ -31,6 +32,7 @@
       <ul id="listaTalhoes" class="lista"></ul>
     </section>
 
+    <!-- Registros -->
     <section id="sec-registros" class="card hidden">
       <h2>🧾 Registros de Adubação</h2>
       <div class="grid grid-4 gap">
@@ -47,6 +49,7 @@
       <ul id="listaRegistros" class="lista"></ul>
     </section>
 
+    <!-- Estoque -->
     <section id="sec-estoque" class="card hidden">
       <h2>📦 Estoque</h2>
       <div class="grid grid-3 gap">
@@ -67,6 +70,7 @@
       </table>
     </section>
 
+    <!-- Resumo -->
     <section id="sec-resumo" class="card hidden">
       <h2>📊 Resumo Mensal</h2>
       <div class="grid grid-3 gap">
@@ -90,6 +94,7 @@
       </table>
     </section>
 
+    <!-- Config -->
     <section id="sec-config" class="card hidden">
       <h2>⚙️ Configurações</h2>
       <div class="card-ghost">
@@ -121,7 +126,7 @@
   </main>
 
   <nav class="bottom-nav">
-    <button data-tab="talhoes" class="nav-btn active">🌾 Talhões</button>
+    <button data-tab="talhoes" class="nav-btn active">🌿 Talhões</button>
     <button data-tab="registros" class="nav-btn">🧾 Registros</button>
     <button data-tab="estoque" class="nav-btn">📦 Estoque</button>
     <button data-tab="resumo" class="nav-btn">📊 Resumo</button>

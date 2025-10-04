@@ -1,4 +1,4 @@
-/* Grão Digital v4 — Resumo com Talhão; SW força atualização; tema verde */
+/* Grão Digital v4 (ícone antigo) — Resumo com Talhão; SW força atualização; tema verde */
 const db={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),del:k=>localStorage.removeItem(k)};
 const K={TALHOES:'grao.talhoes',ESTOQUE:'grao.estoque',REG:'grao.registros'};
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
