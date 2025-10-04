@@ -1,96 +1,51 @@
-/* Grão Digital — final (Resumo sem gráficos; Backup/Drive na Config; sem aba Histórico) */
-const $=(s,e=document)=>e.querySelector(s);const $$=(s,e=document)=>[...e.querySelectorAll(s)];
-const LS={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),clear:()=>localStorage.clear()};
-const STATE={talhoes:LS.get('talhoes',[]),estoque:LS.get('estoque',[]),apps:LS.get('apps',[])};
+/* JS principal do Grão Digital
+ - Talhões CRUD (LocalStorage)
+ - Estoque (nome, qtd kg, preço por saco 50kg)
+ - Registros de adubação, usando insumo do estoque e calculando custo
+ - Resumo Mensal com exportar CSV/PDF
+ - Backup local (JSON) e Google Drive (OAuth)
+*/
+const db={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),del:k=>localStorage.removeItem(k)};
+const K={TALHOES:'grao.talhoes',ESTOQUE:'grao.estoque',REG:'grao.registros'};
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const sections={talhoes:$('#sec-talhoes'),registros:$('#sec-registros'),estoque:$('#sec-estoque'),resumo:$('#sec-resumo'),config:$('#sec-config')};
+$$('.bottom-nav .nav-btn').forEach(btn=>{btn.addEventListener('click',()=>{$$('.bottom-nav .nav-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const tab=btn.dataset.tab;Object.values(sections).forEach(s=>s.classList.add('hidden'));sections[tab].classList.remove('hidden');if(tab==='registros')preencherCombosRegistro();if(tab==='resumo'){preencherFiltrosResumo();renderResumo();}})});
+
+function renderTalhoes(){const t=db.get(K.TALHOES,[]);const ul=$('#listaTalhoes');ul.innerHTML='';t.forEach((nome,i)=>{const li=document.createElement('li');const left=document.createElement('div');left.textContent=nome;const right=document.createElement('div');const bR=document.createElement('button');bR.className='btn btn-sec';bR.textContent='Renomear';bR.onclick=()=>{const novo=prompt('Novo nome para o talhão:',nome);if(!novo)return;t[i]=novo.trim();db.set(K.TALHOES,t);renderTalhoes();preencherCombosRegistro();};const bD=document.createElement('button');bD.className='btn btn-danger';bD.textContent='Excluir';bD.onclick=()=>{if(confirm('Excluir este talhão?')){t.splice(i,1);db.set(K.TALHOES,t);renderTalhoes();preencherCombosRegistro();}};right.append(bR,' ',bD);li.append(left,right);ul.append(li);});}
+$('#btnAddTalhao').onclick=()=>{const nome=$('#nomeTalhao').value.trim();if(!nome)return;const t=db.get(K.TALHOES,[]);t.push(nome);db.set(K.TALHOES,t);$('#nomeTalhao').value='';renderTalhoes();preencherCombosRegistro();};
+
+function renderEstoque(){const est=db.get(K.ESTOQUE,[]);const tb=$('#tabEstoque tbody');tb.innerHTML='';est.forEach((e,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${e.nome}</td><td>${fmtKg(e.qtd)}</td><td>${fmtR$(e.preco)}</td>`;const td=document.createElement('td');const bD=document.createElement('button');bD.className='btn btn-danger';bD.textContent='Excluir';bD.onclick=()=>{if(confirm('Excluir insumo do estoque?')){est.splice(i,1);db.set(K.ESTOQUE,est);renderEstoque();preencherCombosRegistro();}};td.append(bD);tr.append(td);tb.append(tr);});}
+$('#btnAddEstoque').onclick=()=>{const nome=$('#estNome').value.trim();const qtd=parseFloat($('#estQtd').value);const preco=parseFloat($('#estPreco').value);if(!nome||isNaN(preco)){alert('Informe nome e preço 50kg.');return;}const arr=db.get(K.ESTOQUE,[]);arr.push({nome,qtd:isNaN(qtd)?0:qtd,preco});db.set(K.ESTOQUE,arr);$('#estNome').value='';$('#estQtd').value='';$('#estPreco').value='';renderEstoque();preencherCombosRegistro();};
+
+function preencherCombosRegistro(){const t=db.get(K.TALHOES,[]),e=db.get(K.ESTOQUE,[]);const st=$('#regTalhao');st.innerHTML='';t.forEach(v=>{const o=document.createElement('option');o.value=o.textContent=v;st.append(o);});const si=$('#regInsumo');si.innerHTML='';e.forEach(x=>{const o=document.createElement('option');o.value=x.nome;o.textContent=x.nome;si.append(o);});}
+function renderRegistros(){const regs=db.get(K.REG,[]);const ul=$('#listaRegistros');ul.innerHTML='';regs.slice().reverse().slice(0,20).forEach(r=>{const li=document.createElement('li');const custo=custoAplicacao(r.insumo,r.qtd);li.textContent=`${r.data} — ${r.talhao} — ${r.insumo} — ${fmtKg(r.qtd)} — ${fmtR$(custo)} ${r.desc?('— '+r.desc):''}`;ul.append(li);});}
+$('#btnSalvarAplicacao').onclick=()=>{const talhao=$('#regTalhao').value,insumo=$('#regInsumo').value,desc=$('#regDesc').value.trim(),qtd=parseFloat($('#regQtd').value);if(!talhao||!insumo||isNaN(qtd)||qtd<=0){alert('Preencha talhão, insumo e quantidade.');return;}const regs=db.get(K.REG,[]);regs.push({talhao,insumo,qtd,desc,data:dataHoje()});db.set(K.REG,regs);$('#regQtd').value='';$('#regDesc').value='';renderRegistros();renderResumo();};
+
+function custoAplicacao(insumo,qtdKg){const est=db.get(K.ESTOQUE,[]);const item=est.find(e=>e.nome===insumo);if(!item)return 0;const precoPorKg=item.preco/50;return precoPorKg*(qtdKg||0);}
+
+function preencherFiltrosResumo(){const mes=$('#mesResumo');mes.innerHTML='';for(let i=1;i<=12;i++){const o=document.createElement('option');o.value=i;o.textContent=String(i).padStart(2,'0');mes.append(o);}const ano=$('#anoResumo');ano.innerHTML='';const y=new Date().getFullYear();for(let i=y-4;i<=y+1;i++){const o=document.createElement('option');o.value=i;o.textContent=i;ano.append(o);}mes.value=String(new Date().getMonth()+1);ano.value=String(new Date().getFullYear());}
+$('#mesResumo')?.addEventListener('change',renderResumo);$('#anoResumo')?.addEventListener('change',renderResumo);
+
+function renderResumo(){const m=parseInt($('#mesResumo').value),a=parseInt($('#anoResumo').value),regs=db.get(K.REG,[]);const doMes=regs.filter(r=>{const [d,mz,az]=r.data.split('/').map(x=>parseInt(x));return mz===m&&az===a;});const agrup={};doMes.forEach(r=>{if(!agrup[r.insumo])agrup[r.insumo]={kg:0,gasto:0};agrup[r.insumo].kg+=r.qtd;agrup[r.insumo].gasto+=custoAplicacao(r.insumo,r.qtd);});const tb=$('#tabResumo tbody');tb.innerHTML='';let totKg=0,totR$=0;Object.entries(agrup).forEach(([insumo,v])=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${insumo}</td><td>${fmtKg(v.kg)}</td><td>${fmtR$(v.gasto)}</td><td>${String(m).padStart(2,'0')}/${a}</td>`;tb.append(tr);totKg+=v.kg;totR$+=v.gasto;});$('#resKg').textContent=fmtKg(totKg);$('#resR$').textContent=fmtR$(totR$);}
+
+$('#btnExportCSV').onclick=()=>{const rows=[['Insumo','Kg aplicados','Gasto (R$)','Mês/Ano']];$('#tabResumo tbody').querySelectorAll('tr').forEach(tr=>{const cols=[...tr.children].map(td=>td.textContent);rows.push(cols);});const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='resumo.csv';a.click();};
+$('#btnExportPDF').onclick=()=>{const w=window.open('','_blank');const html=`<!doctype html><html><head><meta charset="utf-8"><title>Resumo Mensal</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}h2{margin:0 0 10px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:6px;text-align:left}thead th{background:#eee}</style></head><body><h2>Resumo Mensal ${$('#mesResumo').value}/${$('#anoResumo').value}</h2>${$('#tabResumo').outerHTML}</body></html>`;w.document.write(html);w.document.close();w.focus();w.print();setTimeout(()=>w.close(),500);};
+
+$('#btnExportJSON').onclick=()=>{const payload={talhoes:db.get(K.TALHOES,[]),estoque:db.get(K.ESTOQUE,[]),registros:db.get(K.REG,[])};const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));a.download='grao-digital-backup.json';a.click();};
+$('#inpImportJSON').addEventListener('change',ev=>{const f=ev.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);if(data.talhoes)db.set(K.TALHOES,data.talhoes);if(data.estoque)db.set(K.ESTOQUE,data.estoque);if(data.registros)db.set(K.REG,data.registros);alert('Backup importado.');renderTalhoes();renderEstoque();renderRegistros();renderResumo();preencherCombosRegistro();}catch(e){alert('Arquivo inválido.');}};r.readAsText(f);});
+
 const CLIENT_ID="149167584419-39h4d0qhjfjqs09687oih6p1fkpqds0k.apps.googleusercontent.com";
-let oauthToken=null;
+const SCOPES="https://www.googleapis.com/auth/drive.file openid email profile";let accessToken=null;
+function initGoogle(){const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.onload=()=>{google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,callback:(token)=>{accessToken=token.access_token;alert('Conectado ao Google.');}}).requestAccessToken();};document.body.appendChild(s);}
+$('#btnGoogleConectar').onclick=initGoogle;
+async function driveUpload(){if(!accessToken){alert('Conecte ao Google primeiro.');return;}const payload={talhoes:db.get(K.TALHOES,[]),estoque:db.get(K.ESTOQUE,[]),registros:db.get(K.REG,[])};const meta={name:'grao-digital-backup.json',mimeType:'application/json'};const form=new FormData();form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));form.append('file',new Blob([JSON.stringify(payload)],{type:'application/json'}));const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:form});if(res.ok)alert('Backup salvo no Drive.');else alert('Falha ao salvar no Drive.');}
+$('#btnGoogleSalvar').onclick=driveUpload;
+async function driveDownload(){if(!accessToken){alert('Conecte ao Google primeiro.');return;}const q=encodeURIComponent("name = 'grao-digital-backup.json' and trashed = false");const r=await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id,name)',{headers:{Authorization:'Bearer '+accessToken}});const js=await r.json();const id=js.files?.[0]?.id;if(!id){alert('Arquivo não encontrado no Drive.');return;}const d=await fetch('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media',{headers:{Authorization:'Bearer '+accessToken}});const data=await d.json();if(data.talhoes)db.set(K.TALHOES,data.talhoes);if(data.estoque)db.set(K.ESTOQUE,data.estoque);if(data.registros)db.set(K.REG,data.registros);alert('Backup carregado do Drive.');renderTalhoes();renderEstoque();renderRegistros();renderResumo();preencherCombosRegistro();}
+$('#btnGoogleCarregar').onclick=driveDownload;
 
-const TABS=['talhoes','registros','estoque','resumo','config'];
-function go(tab){if(!TABS.includes(tab))tab='talhoes';history.replaceState({},'',`#${tab}`);render(tab);$$('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab))}
-window.addEventListener('hashchange',()=>go(location.hash.replace('#','')));
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
-function saveAll(){LS.set('talhoes',STATE.talhoes);LS.set('estoque',STATE.estoque);LS.set('apps',STATE.apps)}
+function dataHoje(){const d=new Date();return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}
+function fmtKg(v){return (v||0).toLocaleString('pt-BR');}
+function fmtR$(v){return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 
-function headerDate(){const hoje=new Date();$('#hoje').textContent=hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}
-
-/* ---------- Telas ---------- */
-function viewTalhoes(){const c=document.createElement('section');c.className='card';
-c.innerHTML=`<h2><i class="ri-seedling-line"></i> Talhões</h2>
-<div class="row cols-2"><input id="nomeTalhao" placeholder="Nome do Talhão"><button id="add">Adicionar Talhão</button></div>
-<div id="lista" class="row"></div>`;
-$('#add',c).onclick=()=>{const n=$('#nomeTalhao',c).value.trim();if(!n)return toast('Informe um nome.');STATE.talhoes.push({id:crypto.randomUUID(),nome:n});saveAll();render('talhoes');toast('Talhão adicionado.')} ;
-const box=$('#lista',c); if(STATE.talhoes.length===0){box.innerHTML='<small>Nenhum talhão cadastrado.</small>'}
-else STATE.talhoes.forEach(t=>{const row=document.createElement('div');row.className='row cols-2';row.innerHTML=`<div>${t.nome}</div><div class="btn-line"><button class="secondary" data-a="ren" data-id="${t.id}">Renomear</button><button class="danger" data-a="del" data-id="${t.id}">Excluir</button></div>`;box.append(row)});
-box.onclick=e=>{const b=e.target.closest('button');if(!b)return;const id=b.dataset.id; if(b.dataset.a==='del'){STATE.talhoes=STATE.talhoes.filter(x=>x.id!==id);saveAll();render('talhoes');toast('Talhão removido.')}else{const t=STATE.talhoes.find(x=>x.id===id);const novo=prompt('Novo nome:',t?.nome||'');if(novo){t.nome=novo.trim();saveAll();render('talhoes');toast('Talhão renomeado.')}}};
-return c}
-
-function viewEstoque(){const c=document.createElement('section');c.className='card';
-c.innerHTML=`<h2><i class="ri-archive-2-line"></i> Estoque</h2>
-<div class="row cols-3"><input id="nome" placeholder="Ex.: NPK"><input id="qtd" type="number" min="0" step="0.01" placeholder="Ex.: 1000"><input id="preco" type="number" min="0" step="0.01" placeholder="Preço por saco (50kg)"></div>
-<div class="row" style="margin-top:10px"><button id="add">Adicionar ao Estoque</button></div>
-<table class="table" style="margin-top:12px"><thead><tr><th>Insumo</th><th>Qtd (kg)</th><th>Preço 50kg (R$)</th><th></th></tr></thead><tbody id="tb"></tbody></table>`;
-$('#add',c).onclick=()=>{const n=$('#nome',c).value.trim();const q=parseFloat($('#qtd',c).value);const p=parseFloat($('#preco',c).value)||0;if(!n||!q)return toast('Informe nome e quantidade.');
-const ja=STATE.estoque.find(e=>e.nome.toLowerCase()===n.toLowerCase()); if(ja){ja.qtd+=q;ja.precoSaco=p||ja.precoSaco}else STATE.estoque.push({nome:n,qtd:q,precoSaco:p}); saveAll();render('estoque');toast('Estoque atualizado.')} ;
-const tb=$('#tb',c); STATE.estoque.forEach((e,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${e.nome}</td><td>${e.qtd.toFixed(0)}</td><td>R$ ${(e.precoSaco||0).toFixed(2)}</td><td><button class="danger" data-i="${i}">Excluir</button></td>`;tb.append(tr)});
-tb.onclick=ev=>{const b=ev.target.closest('button');if(!b)return;STATE.estoque.splice(+b.dataset.i,1);saveAll();render('estoque')};
-return c}
-
-function viewRegistros(){const c=document.createElement('section');c.className='card';
-const tal=STATE.talhoes.map(t=>`<option>${t.nome}</option>`).join(''); const est=STATE.estoque.map(e=>`<option value="${e.nome}">${e.nome} — ${e.qtd.toFixed(1)}kg</option>`).join('');
-c.innerHTML=`<h2><i class="ri-ball-pen-line"></i> Registros de Adubação</h2>
-<div class="row cols-3"><select id="selTalhao"><option value="" hidden>Talhão</option>${tal}</select><select id="selInsumo"><option value="" hidden>Insumo (do estoque)</option>${est}</select><input id="kg" type="number" min="0" step="0.01" placeholder="Qtde aplicada (kg)"></div>
-<div class="row cols-2" style="margin-top:10px"><input id="desc" placeholder="Descrição (opcional)"><button id="salvar">Salvar aplicação</button></div>
-<div style="margin-top:12px"><small class="muted">O custo é calculado pelo preço por saco (50kg) do estoque.</small></div>
-<h3 style="margin-top:16px">Últimas aplicações</h3><div id="ult"></div>`;
-$('#salvar',c).onclick=()=>{const talhao=$('#selTalhao',c).value; const nome=$('#selInsumo',c).value; const kg=parseFloat($('#kg',c).value); const desc=$('#desc',c).value.trim();
-if(!talhao||!nome||!kg)return toast('Preencha talhão, insumo e quantidade.'); const item=STATE.estoque.find(e=>e.nome===nome); if(!item)return toast('Insumo não encontrado no estoque.'); if(item.qtd<kg)return toast('Quantidade acima do estoque.');
-item.qtd-=kg; const now=new Date(); STATE.apps.unshift({id:crypto.randomUUID(),data:now.toISOString(),talhao,insumo:nome,kg,desc,mes:now.getMonth()+1,ano:now.getFullYear(),custoItem:item.precoSaco||0});
-saveAll(); render('registros'); toast('Aplicação salva.')} ;
-const ul=document.createElement('ul'); ul.style.listStyle='none'; ul.style.padding='0';
-if(STATE.apps.length===0) ul.innerHTML='<p>Sem registros ainda.</p>'; else STATE.apps.slice(0,12).forEach(r=>{const li=document.createElement('li');li.style.margin='10px 0';
-const dia=new Date(r.data).toLocaleDateString('pt-BR'); const gasto=(r.kg/50)*(r.custoItem||0);
-li.innerHTML=`<div class="row cols-3"><div><strong>${r.talhao}</strong> — ${dia}</div><div>${r.insumo}: <strong>${r.kg.toFixed(1)} kg</strong></div><div>R$ ${gasto.toFixed(2)}</div></div>`; ul.append(li)});
-$('#ult',c).append(ul); return c}
-
-function viewResumo(){const c=document.createElement('section');c.className='card';
-const hoje=new Date(); const mm=hoje.getMonth()+1, yy=hoje.getFullYear();
-c.innerHTML=`<h2><i class="ri-bar-chart-2-line"></i> Resumo Mensal</h2>
-<div class="row cols-3"><select id="mes"></select><select id="ano"></select><div class="btn-line"><button id="csv" class="secondary">Exportar CSV</button><button id="pdf">Exportar PDF</button></div></div>
-<table class="table" id="tbl" style="margin-top:12px"><thead><tr><th>Insumo</th><th>Kg aplicados</th><th>Gasto (R$)</th><th>Mês/Ano</th></tr></thead><tbody></tbody><tfoot><tr><td>Total</td><td id="tkg">0</td><td id="trs">0</td><td></td></tr></tfoot></table>`;
-const selM=$('#mes',c), selA=$('#ano',c); for(let m=1;m<=12;m++){const o=document.createElement('option');o.value=m;o.textContent=m.toString().padStart(2,'0'); if(m===mm)o.selected=true; selM.append(o)}
-for(let a=yy-6;a<=yy+1;a++){const o=document.createElement('option');o.value=a;o.textContent=a; if(a===yy)o.selected=true; selA.append(o)}
-function calc(){const m=+selM.value, a=+selA.value; const map=new Map(); let TK=0, TR=0;
-STATE.apps.forEach(r=>{ if(r.mes===m && r.ano===a){ const g=map.get(r.insumo)||{kg:0,rs:0}; g.kg+=r.kg; g.rs+=(r.kg/50)*(r.custoItem||0); map.set(r.insumo,g); TK+=r.kg; TR+=(r.kg/50)*(r.custoItem||0);} });
-const tb=$('#tbl tbody',c); tb.innerHTML=''; [...map.entries()].forEach(([ins,g])=>{const tr=document.createElement('tr'); tr.innerHTML=`<td>${ins}</td><td>${g.kg.toFixed(2)}</td><td>R$ ${g.rs.toFixed(2)}</td><td>${String(m).padStart(2,'0')}/${a}</td>`; tb.append(tr)});
-$('#tkg',c).textContent=TK.toFixed(2); $('#trs',c).textContent='R$ '+TR.toFixed(2); }
-selM.onchange=selA.onchange=calc; calc();
-$('#csv',c).onclick=()=>{const m=+selM.value, a=+selA.value; const rows=[['Insumo','Kg aplicados','Gasto (R$)','Mes/Ano']]; $('#tbl tbody tr',c)?.parentElement?.querySelectorAll('tr')?.forEach?.(()=>{});
-const map=new Map(); STATE.apps.forEach(r=>{ if(r.mes===m&&r.ano===a){ const g=map.get(r.insumo)||{kg:0,rs:0}; g.kg+=r.kg; g.rs+=(r.kg/50)*(r.custoItem||0); map.set(r.insumo,g);} });
-[...map.entries()].forEach(([ins,g])=>rows.push([ins,g.kg.toFixed(2),g.rs.toFixed(2),`${m}/${a}`])); const csv=rows.map(r=>r.join(';')).join('\\n');
-const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob); Object.assign(document.createElement('a'),{href:url,download:`resumo-${a}-${String(m).padStart(2,'0')}.csv`}).click(); URL.revokeObjectURL(url)};
-$('#pdf',c).onclick=()=>{const {jsPDF}=window.jspdf; const doc=new jsPDF(); const m=+selM.value, a=+selA.value; doc.setFontSize(14); doc.text(`Resumo Mensal — ${String(m).padStart(2,'0')}/${a}`,14,16); let y=26; doc.setFontSize(11);
-doc.text('Insumo',14,y); doc.text('Kg',90,y); doc.text('Gasto (R$)',125,y); y+=6; const map=new Map(); STATE.apps.forEach(r=>{ if(r.mes===m&&r.ano===a){ const g=map.get(r.insumo)||{kg:0,rs:0}; g.kg+=r.kg; g.rs+=(r.kg/50)*(r.custoItem||0); map.set(r.insumo,g);} });
-[...map.entries()].forEach(([ins,g])=>{ doc.text(ins,14,y); doc.text(g.kg.toFixed(2),90,y); doc.text(g.rs.toFixed(2),125,y); y+=6; }); doc.save(`resumo-${a}-${String(m).padStart(2,'0')}.pdf`) };
-return c}
-
-function viewConfig(){const c=document.createElement('section'); c.className='card';
-c.innerHTML=`<h2><i class="ri-settings-3-line"></i> Configurações</h2>
-<div class="row cols-2"><button id="wipe" class="danger">Apagar TODOS os dados</button><div></div></div>
-<h3 style="margin-top:18px">📁 Backup (dispositivo)</h3>
-<div class="row cols-2"><button id="exp" class="secondary">Exportar backup (JSON)</button><div class="btn-line"><input id="file" type="file" accept="application/json"><button id="imp">Importar backup (JSON)</button></div></div>
-<h3 style="margin-top:18px">☁️ Google Drive</h3>
-<div class="row cols-3"><button id="g-login" class="secondary">Conectar ao Google</button><button id="g-save" class="secondary">Salvar no Drive</button><button id="g-load" class="secondary">Carregar do Drive</button></div>
-<pre id="log" style="background:#0b1511;border:1px solid #274232;padding:10px;border-radius:10px;max-height:160px;overflow:auto"></pre>`;
-$('#wipe',c).onclick=()=>{if(confirm('Tem certeza?')){LS.clear();location.reload()}};
-$('#exp',c).onclick=()=>{const data=JSON.stringify(STATE); const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob); Object.assign(document.createElement('a'),{href:url,download:`grao-digital-backup-${Date.now()}.json`}).click(); URL.revokeObjectURL(url)};
-$('#imp',c).onclick=()=>{const f=$('#file',c).files?.[0]; if(!f) return toast('Escolha um arquivo'); const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.talhoes&&d.estoque&&d.apps){ STATE.talhoes=d.talhoes; STATE.estoque=d.estoque; STATE.apps=d.apps; saveAll(); toast('Backup importado.'); render('talhoes'); } else toast('Arquivo inválido.'); }catch{ toast('Erro ao importar.'); } }; rd.readAsText(f) };
-// Google OAuth
-$('#g-login',c).onclick=()=>{ const s=document.createElement('script'); s.src='https://accounts.google.com/gsi/client'; s.onload=()=>{ const tc=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID, scope:'https://www.googleapis.com/auth/drive.file', callback:(tok)=>{ oauthToken=tok.access_token; log('Conectado ao Google. Token OK.'); }}); tc.requestAccessToken(); }; document.body.appendChild(s) };
-$('#g-save',c).onclick=async()=>{ if(!oauthToken) return toast('Conecte ao Google primeiro.'); const meta={name:'grao-digital-backup.json', mimeType:'application/json'}; const form=new FormData(); form.append('metadata', new Blob([JSON.stringify(meta)],{type:'application/json'})); form.append('file', new Blob([JSON.stringify(STATE)],{type:'application/json'})); const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST', headers:{Authorization:`Bearer ${oauthToken}`}, body: form}); log(r.ok?'Backup salvo no Drive.':'Falha ao salvar no Drive.') };
-$('#g-load',c).onclick=async()=>{ if(!oauthToken) return toast('Conecte ao Google primeiro.'); const q=encodeURIComponent(\"name='grao-digital-backup.json' and trashed=false\"); const lr=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&orderBy=modifiedTime desc`,{headers:{Authorization:`Bearer ${oauthToken}`}}); const j=await lr.json(); if(!j.files?.length) return log('Nenhum backup encontrado.'); const id=j.files[0].id; const fr=await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`,{headers:{Authorization:`Bearer ${oauthToken}`}}); const data=await fr.json(); STATE.talhoes=data.talhoes||[]; STATE.estoque=data.estoque||[]; STATE.apps=data.apps||[]; saveAll(); render('talhoes'); log('Backup carregado do Drive.') };
-function log(m){ const p=$('#log',c); p.textContent += (p.textContent?'\\n':'') + m }
-return c}
-
-function render(tab){const m=$('#conteudo'); m.innerHTML=''; if(tab==='talhoes') m.append(viewTalhoes()); if(tab==='registros') m.append(viewRegistros()); if(tab==='estoque') m.append(viewEstoque()); if(tab==='resumo') m.append(viewResumo()); if(tab==='config') m.append(viewConfig())}
-
-document.addEventListener('DOMContentLoaded',()=>{headerDate(); $('.tabs').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; go(b.dataset.tab)}); go(location.hash.replace('#','')||'talhoes'); if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js')});
+function init(){renderTalhoes();renderEstoque();renderRegistros();preencherCombosRegistro();preencherFiltrosResumo();renderResumo();if('serviceWorker'in navigator)navigator.serviceWorker.register('service-worker.js');}
+document.addEventListener('DOMContentLoaded',init);

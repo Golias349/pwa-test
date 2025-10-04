@@ -1,11 +1,10 @@
 {
   "name": "Grão Digital",
-  "short_name": "Grão Digital",
-  "description": "Gestão de talhões, aplicações e custos",
-  "start_url": "./index.html",
+  "short_name": "Grão",
+  "start_url": ".",
   "display": "standalone",
-  "background_color": "#0e1411",
-  "theme_color": "#1e7f3d",
+  "background_color": "#0b1417",
+  "theme_color": "#0d5f34",
   "icons": [
     {
       "src": "icone-192.png",

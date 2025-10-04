@@ -1,40 +1,131 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Grão Digital</title>
+  <meta name="theme-color" content="#0d5f34"/>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1e7f3d">
   <link rel="icon" href="icone-192.png">
   <link rel="apple-touch-icon" href="icone-192.png">
   <link rel="stylesheet" href="estilo.css">
-  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
-  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script defer src="app.js"></script>
 </head>
 <body>
   <header class="app-header">
     <div class="brand">
-      <span class="sprout">🌱</span>
-      <div>
+      <span class="logo">🌱</span>
+      <div class="titles">
         <h1>Grão Digital</h1>
         <small>Gestão de talhões, aplicações e custos</small>
       </div>
     </div>
-    <div id="hoje" class="date"></div>
   </header>
 
-  <main id="conteudo" class="conteudo"></main>
+  <main id="conteudo" class="conteudo">
+    <section id="sec-talhoes" class="card">
+      <h2>🌿 Talhões</h2>
+      <div class="row gap">
+        <input id="nomeTalhao" class="inp" placeholder="Nome do Talhão">
+        <button class="btn" id="btnAddTalhao">Adicionar Talhão</button>
+      </div>
+      <ul id="listaTalhoes" class="lista"></ul>
+    </section>
 
-  <nav class="tabs">
-    <button data-tab="talhoes"><i class="ri-seedling-line"></i><span>Talhões</span></button>
-    <button data-tab="registros"><i class="ri-ball-pen-line"></i><span>Registros</span></button>
-    <button data-tab="estoque"><i class="ri-archive-2-line"></i><span>Estoque</span></button>
-    <button data-tab="resumo"><i class="ri-bar-chart-2-line"></i><span>Resumo</span></button>
-    <button data-tab="config"><i class="ri-settings-3-line"></i><span>Config</span></button>
+    <section id="sec-registros" class="card hidden">
+      <h2>📝 Registros de Adubação</h2>
+      <div class="grid grid-4 gap">
+        <select id="regTalhao" class="inp"></select>
+        <select id="regInsumo" class="inp"></select>
+        <input id="regDesc" class="inp" placeholder="Descrição (opcional)">
+        <input id="regQtd" class="inp" placeholder="Qtd aplicada (kg)" type="number" min="0" step="0.01">
+      </div>
+      <div class="hint">O custo usa o preço do estoque (saco de 50kg).</div>
+      <div class="row end">
+        <button id="btnSalvarAplicacao" class="btn">Salvar aplicação</button>
+      </div>
+      <h3>Últimas aplicações</h3>
+      <ul id="listaRegistros" class="lista"></ul>
+    </section>
+
+    <section id="sec-estoque" class="card hidden">
+      <h2>📦 Estoque</h2>
+      <div class="grid grid-3 gap">
+        <input id="estNome" class="inp" placeholder="Ex.: NPK">
+        <input id="estQtd" class="inp" placeholder="Ex.: 1000 (kg)" type="number" min="0" step="0.01">
+        <input id="estPreco" class="inp" placeholder="Preço por saco 50kg (R$)" type="number" min="0" step="0.01">
+      </div>
+      <div class="row end">
+        <button id="btnAddEstoque" class="btn">Adicionar ao Estoque</button>
+      </div>
+
+      <h3>Itens</h3>
+      <table class="tabela" id="tabEstoque">
+        <thead>
+          <tr><th>Insumo</th><th>Qtd (kg)</th><th>Preço 50kg (R$)</th><th>Ações</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section id="sec-resumo" class="card hidden">
+      <h2>📊 Resumo Mensal</h2>
+      <div class="grid grid-3 gap">
+        <select id="mesResumo" class="inp"></select>
+        <select id="anoResumo" class="inp"></select>
+        <div class="row gap">
+          <button id="btnExportCSV" class="btn btn-sec">Exportar CSV</button>
+          <button id="btnExportPDF" class="btn btn-sec">Exportar PDF</button>
+        </div>
+      </div>
+      <table class="tabela" id="tabResumo">
+        <thead>
+          <tr><th>Insumo</th><th>Kg aplicados</th><th>Gasto (R$)</th><th>Mês/Ano</th></tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr><th>Total</th><th id="resKg">0</th><th id="resR$">R$ 0,00</th><th></th></tr>
+        </tfoot>
+      </table>
+    </section>
+
+    <section id="sec-config" class="card hidden">
+      <h2>⚙️ Configurações</h2>
+      <div class="card-ghost">
+        <h3>Histórico / Backup</h3>
+        <div class="row gap wrap">
+          <button id="btnExportJSON" class="btn btn-sec">Exportar backup (JSON)</button>
+          <label class="file">
+            <input type="file" id="inpImportJSON" accept=".json">
+            <span class="btn btn-sec">Importar backup (JSON)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card-ghost">
+        <h3>Backup no Google Drive (opcional)</h3>
+        <div class="row gap wrap">
+          <button class="btn" id="btnGoogleConectar">Conectar ao Google</button>
+          <button class="btn btn-sec" id="btnGoogleSalvar">Salvar no Drive</button>
+          <button class="btn btn-sec" id="btnGoogleCarregar">Carregar do Drive</button>
+        </div>
+        <small class="hint">Usa OAuth do Google Drive. Precisa estar logado e autorizar.</small>
+      </div>
+
+      <div class="card-ghost danger">
+        <h3>Limpeza</h3>
+        <button id="btnZerar" class="btn btn-danger">Apagar TODOS os dados</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button data-tab="talhoes" class="nav-btn active">🌿 Talhões</button>
+    <button data-tab="registros" class="nav-btn">🧾 Registros</button>
+    <button data-tab="estoque" class="nav-btn">📦 Estoque</button>
+    <button data-tab="resumo" class="nav-btn">📊 Resumo</button>
+    <button data-tab="config" class="nav-btn">⚙️ Config</button>
   </nav>
 
-  <div id="toast" class="toast" role="status"></div>
+  <script src="app.js"></script>
 </body>
 </html>
