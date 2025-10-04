@@ -1,4 +1,4 @@
-const CACHE='grao-digital-v1';
+const CACHE='grao-digital-v3';
 const ASSETS=['./','./index.html','./app.js','./estilo.css','./manifest.json','./icone-192.png','./icone-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))) });
