@@ -1,51 +1,202 @@
-/* Grão Digital v4 (ícone antigo) — Resumo com Talhão; SW força atualização; tema verde */
+/* Grão Digital v5 — Drawer lateral (Config + Política), abas inferiores e PWA */
 const db={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),del:k=>localStorage.removeItem(k)};
 const K={TALHOES:'grao.talhoes',ESTOQUE:'grao.estoque',REG:'grao.registros'};
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-const sections={talhoes:$('#sec-talhoes'),registros:$('#sec-registros'),estoque:$('#sec-estoque'),resumo:$('#sec-resumo'),config:$('#sec-config')};
+const sections={talhoes:$('#sec-talhoes'),registros:$('#sec-registros'),estoque:$('#sec-estoque'),resumo:$('#sec-resumo'),config:$('#sec-config'),politica:$('#sec-politica')};
 
-$$('.bottom-nav .nav-btn').forEach(btn=>{btn.addEventListener('click',()=>{$$('.bottom-nav .nav-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const tab=btn.dataset.tab;Object.values(sections).forEach(s=>s.classList.add('hidden'));sections[tab].classList.remove('hidden');if(tab==='registros')preencherCombosRegistro();if(tab==='resumo'){preencherFiltrosResumo();renderResumo();}})});
+// Bottom tabs
+$$('.bottom-nav .nav-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    $$('.bottom-nav .nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab=btn.dataset.tab;
+    Object.values(sections).forEach(s=>s.classList.add('hidden'));
+    sections[tab].classList.remove('hidden');
+    if(tab==='registros')preencherCombosRegistro();
+    if(tab==='resumo'){preencherFiltrosResumo();renderResumo();}
+  });
+});
+
+// Drawer
+const drawer = $('#drawer'), overlay = $('#overlay');
+$('#btnOpenDrawer').onclick=()=>{drawer.classList.add('show');overlay.classList.add('show');};
+$('#btnCloseDrawer').onclick=()=>{drawer.classList.remove('show');overlay.classList.remove('show');};
+overlay.onclick=()=>{$('#btnCloseDrawer').click();};
+
+$$('.drawer-link').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const open=b.dataset.open, action=b.dataset.action;
+    if(open){
+      Object.values(sections).forEach(s=>s.classList.add('hidden'));
+      $$('.bottom-nav .nav-btn').forEach(x=>x.classList.remove('active'));
+      sections[open].classList.remove('hidden');
+      $('#btnCloseDrawer').click();
+      if(open==='resumo'){preencherFiltrosResumo();renderResumo();}
+    }else if(action){
+      if(action==='backup') exportJSON();
+      if(action==='drive-save') driveUpload();
+      if(action==='wipe') wipeAll();
+      $('#btnCloseDrawer').click();
+    }
+  });
+});
 
 /* ===== Talhões ===== */
-function renderTalhoes(){const t=db.get(K.TALHOES,[]);const ul=$('#listaTalhoes');ul.innerHTML='';t.forEach((nome,i)=>{const li=document.createElement('li');const left=document.createElement('div');left.textContent=nome;const right=document.createElement('div');const bR=document.createElement('button');bR.className='btn btn-sec';bR.textContent='Renomear';bR.onclick=()=>{const novo=prompt('Novo nome para o talhão:',nome);if(!novo)return;t[i]=novo.trim();db.set(K.TALHOES,t);renderTalhoes();preencherCombosRegistro();};const bD=document.createElement('button');bD.className='btn btn-danger';bD.textContent='Excluir';bD.onclick=()=>{if(confirm('Excluir este talhão?')){t.splice(i,1);db.set(K.TALHOES,t);renderTalhoes();preencherCombosRegistro();}};right.append(bR,' ',bD);li.append(left,right);ul.append(li);});}
-$('#btnAddTalhao').onclick=()=>{const nome=$('#nomeTalhao').value.trim();if(!nome)return;const t=db.get(K.TALHOES,[]);t.push(nome);db.set(K.TALHOES,t);$('#nomeTalhao').value='';renderTalhoes();preencherCombosRegistro();};
+function renderTalhoes(){
+  const t=db.get(K.TALHOES,[]);
+  const ul=$('#listaTalhoes'); ul.innerHTML='';
+  t.forEach((nome,i)=>{
+    const li=document.createElement('li');
+    const left=document.createElement('div'); left.textContent=nome;
+    const right=document.createElement('div');
+    const bR=document.createElement('button'); bR.className='btn btn-sec'; bR.textContent='Renomear';
+    bR.onclick=()=>{const novo=prompt('Novo nome para o talhão:',nome); if(!novo)return; t[i]=novo.trim(); db.set(K.TALHOES,t); renderTalhoes(); preencherCombosRegistro();};
+    const bD=document.createElement('button'); bD.className='btn btn-danger'; bD.textContent='Excluir';
+    bD.onclick=()=>{ if(confirm('Excluir este talhão?')){ t.splice(i,1); db.set(K.TALHOES,t); renderTalhoes(); preencherCombosRegistro(); }};
+    right.append(bR,' ',bD); li.append(left,right); ul.append(li);
+  });
+}
+$('#btnAddTalhao').onclick=()=>{
+  const nome=$('#nomeTalhao').value.trim(); if(!nome)return;
+  const t=db.get(K.TALHOES,[]); t.push(nome); db.set(K.TALHOES,t);
+  $('#nomeTalhao').value=''; renderTalhoes(); preencherCombosRegistro();
+};
 
 /* ===== Estoque ===== */
-function renderEstoque(){const est=db.get(K.ESTOQUE,[]);const tb=$('#tabEstoque tbody');tb.innerHTML='';est.forEach((e,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${e.nome}</td><td>${fmtKg(e.qtd)}</td><td>${fmtR$(e.preco)}</td>`;const td=document.createElement('td');const bD=document.createElement('button');bD.className='btn btn-danger';bD.textContent='Excluir';bD.onclick=()=>{if(confirm('Excluir insumo do estoque?')){est.splice(i,1);db.set(K.ESTOQUE,est);renderEstoque();preencherCombosRegistro();}};td.append(bD);tr.append(td);tb.append(tr);});}
-$('#btnAddEstoque').onclick=()=>{const nome=$('#estNome').value.trim();const qtd=parseFloat($('#estQtd').value);const preco=parseFloat($('#estPreco').value);if(!nome||isNaN(preco)){alert('Informe nome e preço 50kg.');return;}const arr=db.get(K.ESTOQUE,[]);arr.push({nome,qtd:isNaN(qtd)?0:qtd,preco});db.set(K.ESTOQUE,arr);$('#estNome').value='';$('#estQtd').value='';$('#estPreco').value='';renderEstoque();preencherCombosRegistro();};
+function renderEstoque(){
+  const est=db.get(K.ESTOQUE,[]);
+  const tb=$('#tabEstoque tbody'); tb.innerHTML='';
+  est.forEach((e,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${e.nome}</td><td>${fmtKg(e.qtd)}</td><td>${fmtR$(e.preco)}</td>`;
+    const td=document.createElement('td');
+    const bD=document.createElement('button'); bD.className='btn btn-danger'; bD.textContent='Excluir';
+    bD.onclick=()=>{ if(confirm('Excluir insumo do estoque?')){ est.splice(i,1); db.set(K.ESTOQUE,est); renderEstoque(); preencherCombosRegistro(); }};
+    td.append(bD); tr.append(td); tb.append(tr);
+  });
+}
+$('#btnAddEstoque').onclick=()=>{
+  const nome=$('#estNome').value.trim();
+  const qtd=parseFloat($('#estQtd').value);
+  const preco=parseFloat($('#estPreco').value);
+  if(!nome||isNaN(preco)){ alert('Informe nome e preço 50kg.'); return; }
+  const arr=db.get(K.ESTOQUE,[]); arr.push({nome,qtd:isNaN(qtd)?0:qtd,preco});
+  db.set(K.ESTOQUE,arr); $('#estNome').value=''; $('#estQtd').value=''; $('#estPreco').value=''; renderEstoque(); preencherCombosRegistro();
+};
 
 /* ===== Registros ===== */
-function preencherCombosRegistro(){const t=db.get(K.TALHOES,[]),e=db.get(K.ESTOQUE,[]);const st=$('#regTalhao');st.innerHTML='';t.forEach(v=>{const o=document.createElement('option');o.value=o.textContent=v;st.append(o);});const si=$('#regInsumo');si.innerHTML='';e.forEach(x=>{const o=document.createElement('option');o.value=x.nome;o.textContent=x.nome;si.append(o);});}
-function renderRegistros(){const regs=db.get(K.REG,[]);const ul=$('#listaRegistros');ul.innerHTML='';regs.slice().reverse().slice(0,20).forEach(r=>{const li=document.createElement('li');const custo=custoAplicacao(r.insumo,r.qtd);li.textContent=`${r.data} — ${r.talhao} — ${r.insumo} — ${fmtKg(r.qtd)} — ${fmtR$(custo)} ${r.desc?('— '+r.desc):''}`;ul.append(li);});}
-$('#btnSalvarAplicacao').onclick=()=>{const talhao=$('#regTalhao').value,insumo=$('#regInsumo').value,desc=$('#regDesc').value.trim(),qtd=parseFloat($('#regQtd').value);if(!talhao||!insumo||isNaN(qtd)||qtd<=0){alert('Preencha talhão, insumo e quantidade.');return;}const regs=db.get(K.REG,[]);regs.push({talhao,insumo,qtd,desc,data:dataHoje()});db.set(K.REG,regs);$('#regQtd').value='';$('#regDesc').value='';renderRegistros();renderResumo();};
+function preencherCombosRegistro(){
+  const t=db.get(K.TALHOES,[]), e=db.get(K.ESTOQUE,[]);
+  const st=$('#regTalhao'); st.innerHTML=''; t.forEach(v=>{const o=document.createElement('option'); o.value=o.textContent=v; st.append(o);});
+  const si=$('#regInsumo'); si.innerHTML=''; e.forEach(x=>{const o=document.createElement('option'); o.value=x.nome; o.textContent=x.nome; si.append(o);});
+}
+function renderRegistros(){
+  const regs=db.get(K.REG,[]); const ul=$('#listaRegistros'); ul.innerHTML='';
+  regs.slice().reverse().slice(0,20).forEach(r=>{
+    const li=document.createElement('li'); const custo=custoAplicacao(r.insumo,r.qtd);
+    li.textContent=`${r.data} — ${r.talhao} — ${r.insumo} — ${fmtKg(r.qtd)} — ${fmtR$(custo)} ${r.desc?('— '+r.desc):''}`;
+    ul.append(li);
+  });
+}
+$('#btnSalvarAplicacao').onclick=()=>{
+  const talhao=$('#regTalhao').value, insumo=$('#regInsumo').value, desc=$('#regDesc').value.trim(), qtd=parseFloat($('#regQtd').value);
+  if(!talhao||!insumo||isNaN(qtd)||qtd<=0){ alert('Preencha talhão, insumo e quantidade.'); return; }
+  const regs=db.get(K.REG,[]); regs.push({talhao,insumo,qtd,desc,data:dataHoje()}); db.set(K.REG,regs);
+  $('#regQtd').value=''; $('#regDesc').value=''; renderRegistros(); renderResumo();
+};
 
 /* ===== Cálculos ===== */
 function custoAplicacao(insumo,qtdKg){const est=db.get(K.ESTOQUE,[]);const item=est.find(e=>e.nome===insumo);if(!item)return 0;const precoPorKg=item.preco/50;return precoPorKg*(qtdKg||0);}
 
 /* ===== Resumo (Talhão + Insumo) ===== */
-function preencherFiltrosResumo(){const mes=$('#mesResumo');mes.innerHTML='';for(let i=1;i<=12;i++){const o=document.createElement('option');o.value=i;o.textContent=String(i).padStart(2,'0');mes.append(o);}const ano=$('#anoResumo');ano.innerHTML='';const y=new Date().getFullYear();for(let i=y-4;i<=y+1;i++){const o=document.createElement('option');o.value=i;o.textContent=i;ano.append(o);}mes.value=String(new Date().getMonth()+1);ano.value=String(new Date().getFullYear());}
-$('#mesResumo')?.addEventListener('change',renderResumo);$('#anoResumo')?.addEventListener('change',renderResumo);
+function preencherFiltrosResumo(){
+  const mes=$('#mesResumo'); mes.innerHTML=''; for(let i=1;i<=12;i++){const o=document.createElement('option'); o.value=i; o.textContent=String(i).padStart(2,'0'); mes.append(o);}
+  const ano=$('#anoResumo'); ano.innerHTML=''; const y=new Date().getFullYear(); for(let i=y-4;i<=y+1;i++){const o=document.createElement('option'); o.value=i; o.textContent=i; ano.append(o);}
+  mes.value=String(new Date().getMonth()+1); ano.value=String(new Date().getFullYear());
+}
+$('#mesResumo')?.addEventListener('change',renderResumo); $('#anoResumo')?.addEventListener('change',renderResumo);
 
-function aggregateResumo(m,a){const regs=db.get(K.REG,[]);const out={rows:[],totKg:0,totG:0};const map=new Map();regs.forEach(r=>{const [d,mm,aa]=r.data.split('/').map(x=>parseInt(x));if(mm===m&&aa===a){const key=r.talhao+'||'+r.insumo;const g=map.get(key)||{talhao:r.talhao,insumo:r.insumo,kg:0,gasto:0};g.kg+=r.qtd;g.gasto+=custoAplicacao(r.insumo,r.qtd);map.set(key,g);out.totKg+=r.qtd;out.totG+=custoAplicacao(r.insumo,r.qtd);}});out.rows=[...map.values()].sort((x,y)=>x.talhao.localeCompare(y.talhao)||x.insumo.localeCompare(y.insumo));return out;}
-
-function renderResumo(){const m=parseInt($('#mesResumo').value),a=parseInt($('#anoResumo').value);const ag=aggregateResumo(m,a);const tb=$('#tabResumo tbody');tb.innerHTML='';ag.rows.forEach(r=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${r.talhao}</td><td>${r.insumo}</td><td>${r.kg.toFixed(2)}</td><td>${fmtR$(r.gasto)}</td><td>${String(m).padStart(2,'0')}/${a}</td>`;tb.append(tr);});$('#resKg').textContent=ag.totKg.toFixed(2);$('#resR$').textContent=fmtR$(ag.totG);}
+function aggregateResumo(m,a){
+  const regs=db.get(K.REG,[]); const out={rows:[],totKg:0,totG:0}; const map=new Map();
+  regs.forEach(r=>{const [d,mm,aa]=r.data.split('/').map(x=>parseInt(x)); if(mm===m&&aa===a){const key=r.talhao+'||'+r.insumo; const g=map.get(key)||{talhao:r.talhao,insumo:r.insumo,kg:0,gasto:0}; g.kg+=r.qtd; g.gasto+=custoAplicacao(r.insumo,r.qtd); map.set(key,g); out.totKg+=r.qtd; out.totG+=custoAplicacao(r.insumo,r.qtd);} });
+  out.rows=[...map.values()].sort((x,y)=>x.talhao.localeCompare(y.talhao)||x.insumo.localeCompare(y.insumo)); return out;
+}
+function renderResumo(){
+  const m=parseInt($('#mesResumo').value), a=parseInt($('#anoResumo').value);
+  const ag=aggregateResumo(m,a); const tb=$('#tabResumo tbody'); tb.innerHTML='';
+  ag.rows.forEach(r=>{const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.talhao}</td><td>${r.insumo}</td><td>${r.kg.toFixed(2)}</td><td>${fmtR$(r.gasto)}</td><td>${String(m).padStart(2,'0')}/${a}</td>`; tb.append(tr);});
+  $('#resKg').textContent=ag.totKg.toFixed(2); $('#resR$').textContent=fmtR$(ag.totG);
+}
 
 /* ===== Exportações ===== */
-$('#btnExportCSV').onclick=()=>{const m=parseInt($('#mesResumo').value),a=parseInt($('#anoResumo').value);const ag=aggregateResumo(m,a);const rows=[['Talhão','Insumo','Kg aplicados','Gasto (R$)','Mês/Ano']].concat(ag.rows.map(r=>[r.talhao,r.insumo,r.kg.toFixed(2),r.gasto.toFixed(2),`${String(m).padStart(2,'0')}/${a}`]));rows.push(['TOTAL','','',ag.totG.toFixed(2),`${String(m).padStart(2,'0')}/${a}`]);const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');const aEl=document.createElement('a');aEl.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));aEl.download=`resumo-${a}-${String(m).padStart(2,'0')}.csv`;aEl.click();};
+function exportCSV(){
+  const m=parseInt($('#mesResumo').value), a=parseInt($('#anoResumo').value); const ag=aggregateResumo(m,a);
+  const rows=[['Talhão','Insumo','Kg aplicados','Gasto (R$)','Mês/Ano']].concat(ag.rows.map(r=>[r.talhao,r.insumo,r.kg.toFixed(2),r.gasto.toFixed(2),`${String(m).padStart(2,'0')}/${a}`]));
+  rows.push(['TOTAL','','',ag.totG.toFixed(2),`${String(m).padStart(2,'0')}/${a}`]);
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const aEl=document.createElement('a'); aEl.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); aEl.download=`resumo-${a}-${String(m).padStart(2,'0')}.csv`; aEl.click();
+}
+$('#btnExportCSV').onclick=exportCSV;
 
-$('#btnExportPDF').onclick=()=>{const m=parseInt($('#mesResumo').value),a=parseInt($('#anoResumo').value);const ag=aggregateResumo(m,a);const w=window.open('','_blank');const tbody=ag.rows.map(r=>`<tr><td>${r.talhao}</td><td>${r.insumo}</td><td>${r.kg.toFixed(2)}</td><td>${r.gasto.toFixed(2)}</td><td>${String(m).padStart(2,'0')}/${a}</td></tr>`).join('');const html=`<!doctype html><html><head><meta charset="utf-8"><title>Resumo Mensal</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}h2{margin:0 0 10px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:6px;text-align:left}thead th{background:#eee}</style></head><body><h2>Resumo Mensal ${String(m).padStart(2,'0')}/${a}</h2><table><thead><tr><th>Talhão</th><th>Insumo</th><th>Kg aplicados</th><th>Gasto (R$)</th><th>Mês/Ano</th></tr></thead><tbody>${tbody}</tbody><tfoot><tr><th colspan="2">Total</th><th>${ag.totKg.toFixed(2)}</th><th>${ag.totG.toFixed(2)}</th><th></th></tr></tfoot></table></body></html>`;w.document.write(html);w.document.close();w.focus();w.print();setTimeout(()=>w.close(),600);};
+function exportPDF(){
+  const m=parseInt($('#mesResumo').value), a=parseInt($('#anoResumo').value); const ag=aggregateResumo(m,a); const w=window.open('','_blank');
+  const tbody=ag.rows.map(r=>`<tr><td>${r.talhao}</td><td>${r.insumo}</td><td>${r.kg.toFixed(2)}</td><td>${r.gasto.toFixed(2)}</td><td>${String(m).padStart(2,'0')}/${a}</td></tr>`).join('');
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Resumo Mensal</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}h2{margin:0 0 10px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:6px;text-align:left}thead th{background:#eee}</style></head><body><h2>Resumo Mensal ${String(m).padStart(2,'0')}/${a}</h2><table><thead><tr><th>Talhão</th><th>Insumo</th><th>Kg aplicados</th><th>Gasto (R$)</th><th>Mês/Ano</th></tr></thead><tbody>${tbody}</tbody><tfoot><tr><th colspan="2">Total</th><th>${ag.totKg.toFixed(2)}</th><th>${ag.totG.toFixed(2)}</th><th></th></tr></tfoot></table></body></html>`;
+  w.document.write(html); w.document.close(); w.focus(); w.print(); setTimeout(()=>w.close(),600);
+}
+$('#btnExportPDF').onclick=exportPDF;
 
 /* ===== Backup Local & Drive ===== */
-$('#btnExportJSON').onclick=()=>{const payload={talhoes:db.get(K.TALHOES,[]),estoque:db.get(K.ESTOQUE,[]),registros:db.get(K.REG,[])};const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));a.download='grao-digital-backup.json';a.click();};
-$('#inpImportJSON').addEventListener('change',ev=>{const f=ev.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);if(data.talhoes)db.set(K.TALHOES,data.talhoes);if(data.estoque)db.set(K.ESTOQUE,data.estoque);if(data.registros)db.set(K.REG,data.registros);alert('Backup importado.');renderTalhoes();renderEstoque();renderRegistros();preencherCombosRegistro();renderResumo();}catch(e){alert('Arquivo inválido.');}};r.readAsText(f);});
+function exportJSON(){
+  const payload={talhoes:db.get(K.TALHOES,[]),estoque:db.get(K.ESTOQUE,[]),registros:db.get(K.REG,[])};
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'})); a.download='grao-digital-backup.json'; a.click();
+}
+$('#btnExportJSON').onclick=exportJSON;
+
+$('#inpImportJSON').addEventListener('change',ev=>{
+  const f=ev.target.files?.[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{const data=JSON.parse(r.result); if(data.talhoes)db.set(K.TALHOES,data.talhoes); if(data.estoque)db.set(K.ESTOQUE,data.estoque); if(data.registros)db.set(K.REG,data.registros);
+    alert('Backup importado.'); renderTalhoes(); renderEstoque(); renderRegistros(); preencherCombosRegistro(); renderResumo();
+  }catch(e){alert('Arquivo inválido.');}};
+  r.readAsText(f);
+});
 
 const CLIENT_ID="149167584419-39h4d0qhjfjqs09687oih6p1fkpqds0k.apps.googleusercontent.com";
-const SCOPES="https://www.googleapis.com/auth/drive.file openid email profile";let accessToken=null;
-function initGoogle(){const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.onload=()=>{google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,callback:(token)=>{accessToken=token.access_token;alert('Conectado ao Google.');}}).requestAccessToken();};document.body.appendChild(s);}
-$('#btnGoogleConectar').onclick=initGoogle;
-async function driveUpload(){if(!accessToken){alert('Conecte ao Google primeiro.');return;}const payload={talhoes:db.get(K.TALHOES,[]),estoque:db.get(K.ESTOQUE,[]),registros:db.get(K.REG,[])};const meta={name:'grao-digital-backup.json',mimeType:'application/json'};const form=new FormData();form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));form.append('file',new Blob([JSON.stringify(payload)],{type:'application/json'}));const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:form});if(res.ok)alert('Backup salvo no Drive.');else alert('Falha ao salvar no Drive.');}
-$('#btnGoogleSalvar').onclick=driveUpload;
-async function driveDownload(){if(!accessToken){alert('Conecte ao Google primeiro.');return;}const q=encodeURIComponent("name = 'grao-digital-backup.json' and trashed = false");const r=await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id,name)',{headers:{Authorization:'Bearer '+accessToken}});const js=await r.json();const id=js.files?.[0]?.id;if(!id){alert('Arquivo não encontrado no Drive.');return;}const d=await fetch('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media',{headers:{Authorization:'Bearer '+accessToken}});const data=await d.json();if(data.talhoes)db.set(K.TALHOES,data.talhoes);if(data.estoque)db.set(K.ESTOQUE,data.estoque);if(data.registros)db.set(K.REG,data.registros);alert('Backup carregado do Drive.');renderTalhoes();renderEstoque();renderRegistros();preencherCombosRegistro();renderResumo();}
+const SCOPES="https://www.googleapis.com/auth/drive.file openid email profile"; let accessToken=null;
+function initGoogle(){const s=document.createElement('script'); s.src='https://accounts.google.com/gsi/client';
+  s.onload=()=>{google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,callback:(token)=>{accessToken=token.access_token;alert('Conectado ao Google.');}}).requestAccessToken();};
+  document.body.appendChild(s);
+}
+$('#btnGoogleConectar')?.addEventListener('click',initGoogle);
+
+async function driveUpload(){
+  if(!accessToken){alert('Conecte ao Google primeiro.');return;}
+  const payload={talhoes:db.get(K.TALHOES,[]),estoque:db.get(K.ESTOQUE,[]),registros:db.get(K.REG,[])};
+  const meta={name:'grao-digital-backup.json',mimeType:'application/json'};
+  const form=new FormData();
+  form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+  form.append('file',new Blob([JSON.stringify(payload)],{type:'application/json'}));
+  const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:form});
+  if(res.ok) alert('Backup salvo no Drive.'); else alert('Falha ao salvar no Drive.');
+}
+$('#btnGoogleSalvar')?.addEventListener('click',driveUpload);
+
+async function driveDownload(){
+  if(!accessToken){alert('Conecte ao Google primeiro.');return;}
+  const q=encodeURIComponent("name = 'grao-digital-backup.json' and trashed = false");
+  const r=await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id,name)',{headers:{Authorization:'Bearer '+accessToken}});
+  const js=await r.json(); const id=js.files?.[0]?.id;
+  if(!id){alert('Arquivo não encontrado no Drive.');return;}
+  const d=await fetch('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media',{headers:{Authorization:'Bearer '+accessToken}});
+  const data=await d.json();
+  if(data.talhoes)db.set(K.TALHOES,data.talhoes); if(data.estoque)db.set(K.ESTOQUE,data.estoque); if(data.registros)db.set(K.REG,data.registros);
+  alert('Backup carregado do Drive.'); renderTalhoes(); renderEstoque(); renderRegistros(); preencherCombosRegistro(); renderResumo();
+}
+$('#btnGoogleCarregar')?.addEventListener('click',driveDownload);
+
+function wipeAll(){ if(confirm('Tem certeza que deseja apagar TODOS os dados?')){ db.del(K.TALHOES); db.del(K.ESTOQUE); db.del(K.REG); alert('Dados apagados.'); renderTalhoes(); renderEstoque(); renderRegistros(); preencherCombosRegistro(); renderResumo(); } }
+$('#btnZerar')?.addEventListener('click',wipeAll);
 
 /* ===== Utils ===== */
 function dataHoje(){const d=new Date();return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}
@@ -53,5 +204,8 @@ function fmtKg(v){return (v||0).toLocaleString('pt-BR');}
 function fmtR$(v){return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 
 /* ===== Init ===== */
-function init(){renderTalhoes();renderEstoque();renderRegistros();preencherCombosRegistro();preencherFiltrosResumo();renderResumo();if('serviceWorker'in navigator)navigator.serviceWorker.register('service-worker.js');}
+function init(){
+  renderTalhoes(); renderEstoque(); renderRegistros(); preencherCombosRegistro(); preencherFiltrosResumo(); renderResumo();
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
+}
 document.addEventListener('DOMContentLoaded',init);
