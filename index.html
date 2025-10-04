@@ -5,21 +5,23 @@
 <link rel="apple-touch-icon" href="icone-192.png"><link rel="stylesheet" href="estilo.css"></head>
 <body>
 <div class="overlay" id="overlay"></div>
-<aside class="drawer" id="drawer"><div class="drawer-header">
-  <div class="logo-circle">🌱</div><div><div class="app-name">Grão Digital</div><small class="muted">Menu</small></div>
-  <button class="drawer-close" id="btnCloseDrawer">✕</button></div>
-  <nav class="drawer-nav">
-    <button class="drawer-link" data-open="config">⚙️ Configurações</button>
-    <button class="drawer-link" data-open="politica">⚖️ Política de Privacidade</button>
-    <hr>
-    <button class="drawer-link" data-action="backup">🔄 Backup Rápido (JSON)</button>
-    <button class="drawer-link" data-action="drive-save">☁️ Salvar no Drive</button>
-    <button class="drawer-link danger" data-action="wipe">❌ Apagar TODOS os dados</button>
-  </nav><footer class="drawer-footer muted">v5 • PWA</footer></aside>
+<aside class="drawer" id="drawer" aria-hidden="true" aria-label="Menu lateral">
+  <div class="drawer-header"><div class="logo-circle">🌱</div>
+    <div class="drawer-title"><div class="app-name">Grão Digital</div><small class="muted">Menu</small></div>
+    <button class="drawer-close" id="btnCloseDrawer" aria-label="Fechar menu">✕</button>
+  </div>
+  <nav class="drawer-nav" role="menu">
+    <button class="drawer-link" data-open="config" role="menuitem">⚙️ Configurações</button>
+    <button class="drawer-link" data-open="politica" role="menuitem">📜 Política de Privacidade</button>
+  </nav>
+  <footer class="drawer-footer muted">v5.1 • PWA</footer>
+</aside>
 
-<header class="app-header"><button class="hamburger" id="btnOpenDrawer">☰</button>
+<header class="app-header">
+  <button class="hamburger" id="btnOpenDrawer" aria-label="Abrir menu" aria-haspopup="true" aria-controls="drawer">☰</button>
   <div class="brand"><span class="logo">🌱</span><div class="titles"><h1>Grão Digital</h1>
-  <small>Gestão de talhões, aplicações e custos</small></div></div></header>
+  <small>Gestão de talhões, aplicações e custos</small></div></div>
+</header>
 
 <main id="conteudo" class="conteudo">
 <section id="sec-talhoes" class="card"><h2>🌿 Talhões</h2>
@@ -57,14 +59,14 @@
     <button class="btn btn-sec" id="btnGoogleSalvar">Salvar no Drive</button>
     <button class="btn btn-sec" id="btnGoogleCarregar">Carregar do Drive</button></div>
     <small class="hint">Usa OAuth do Google Drive. Precisa autorizar na sua conta Google.</small></div>
-  <div class="card-ghost danger"><h3>Limpeza</h3><button id="btnZerar" class="btn btn-danger">Apagar TODOS os dados</button></div></section>
+</section>
 
-<section id="sec-politica" class="card hidden"><h2>⚖️ Política de Privacidade</h2>
+<section id="sec-politica" class="card hidden"><h2>📜 Política de Privacidade</h2>
   <div class="policy"><p class="muted">Última atualização: Outubro de 2025</p>
   <p>O <strong>Grão Digital</strong> armazena localmente os dados que você insere (talhões, insumos, registros e estoque). Esses dados <strong>não são enviados automaticamente</strong> para servidores externos.</p>
   <p>Se optar por conectar a sua conta Google, o app pedirá permissão somente para criar e atualizar um arquivo chamado <code>grao-digital-backup.json</code> no seu Google Drive e ler esse arquivo para restauração. Nenhum outro arquivo é acessado.</p>
   <p>Não há compartilhamento com terceiros, cookies de rastreamento ou analytics.</p>
-  <p>Dúvidas? <a href="mailto:suporte@graodigital.app">suporte@graodigital.app</a>. Versão para link: <a href="politica.html" target="_blank" rel="noopener">politica.html</a></p></div></section>
+  <p>Dúvidas? <a href="mailto:suporte@graodigital.app">suporte@graodigital.app</a>. Versão externa: <a href="politica.html" target="_blank" rel="noopener">politica.html</a></p></div></section>
 </main>
 
 <nav class="bottom-nav"><button data-tab="talhoes" class="nav-btn active">🌿 Talhões</button>
